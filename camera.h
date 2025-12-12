@@ -26,10 +26,13 @@ double hit_sphere(const point3& center, double radius, const ray& r) {
     return (h - std::sqrt(discriminant) ) / a;
 }
 
-color ray_color(const ray& r, const hittable& world){
+color ray_color(const ray& r, const hittable& world, int max_bounces, double reflectance_coeff){
     hit_record rec;
-    if (world.hit(r, interval(0, Infinity), rec)){
-        return 0.5 * (rec.normal + color(1,1,1));
+    if (max_bounces <= 0) return color(0, 0, 0);
+    if (world.hit(r, interval(0.001, Infinity), rec)){  // 0.001 tolerance for floating point rounding error
+        // vec3 direction = random_uniform_on_hemisphere(rec.normal);
+        vec3 direction = rec.normal + random_unit_vector();         // lambertian diffuse
+        return reflectance_coeff * ray_color(ray(rec.point_incident, direction), world, max_bounces - 1, reflectance_coeff);
     }
 
     vec3 unit_direction = unit_vector(r.direction());
@@ -39,7 +42,10 @@ color ray_color(const ray& r, const hittable& world){
 
 class Camera {
   public:
-    int sample_per_pixel = 10;
+    bool enableAA = true;   // Enable Anti-aliasing, default : true
+    int sample_per_pixel = 4;
+    int max_bounces = 10;
+    double reflectance_coeff = 0.5;
     Camera(int imWidth, double aspectRatio, double viewportHeight, double focalLength, hittable_list& world_)
         : world(world_)
     {
@@ -55,7 +61,7 @@ class Camera {
     int ImageHeight(){ return image_height; }
 
     vec3 getCenter(){ return camera_center; }
-    vec3 setCenter(vec3 newPosition){ camera_center = newPosition; }
+    void setCenter(vec3 newPosition){ camera_center = newPosition; }
 
     double getAspectRatio(){ return aspect_ratio; }
 
@@ -75,9 +81,19 @@ class Camera {
         for (int j = 0; j < image_height; j++) {
             std::clog << "\rScanlines remaining: " << (image_height - j) << ' ' << std::flush;
             for (int i = 0; i < image_width; i++) {
-                color pixel_color = color(0, 0, 0);
-                process_ray_samples(i, j, pixel_color);
-                write_color(std::cout,  pixel_samples_scale * pixel_color);
+                if (enableAA){
+                    color pixel_color = color(0, 0, 0);
+                    process_ray_samples(i, j, pixel_color);
+                    write_color(std::cout,  pixel_samples_scale * pixel_color);
+                }
+                else{
+                    vec3 pixel_center = pixel00_loc + (i * pixel_delta_u) + (j * pixel_delta_v);
+                    vec3 ray_direction = pixel_center - camera_center;
+                    ray r(camera_center, ray_direction);
+                    
+                    color pixel_color = ray_color(r, world, max_bounces, reflectance_coeff);
+                    write_color(std::cout, pixel_color);
+                }
             }
         }
 
@@ -87,7 +103,7 @@ class Camera {
     void process_ray_samples(int i, int j, color &pixel_color){
         for (int sample = 0; sample < sample_per_pixel; sample++){
             ray r = get_ray(i, j);
-            pixel_color += ray_color(r, world);
+            pixel_color += ray_color(r, world, max_bounces, reflectance_coeff);
         }
     }
 
@@ -108,11 +124,12 @@ class Camera {
 
     double pixel_samples_scale;         // Color scale factor for a sum of pixel samples
 
-
+    /// @brief Get integer image height based on the aspect ratio of the image
     int get_imageHeight (int imWidth, double aspectRatio){
         int image_height = int (imWidth/ aspectRatio);
         return image_height = (image_height < 1) ? 1 : image_height;
     }
+
     void initialize(){
         image_height = get_imageHeight(image_width, aspect_ratio);
         pixel_samples_scale = 1.0 / sample_per_pixel;
@@ -134,8 +151,8 @@ class Camera {
     }
 
 
+    /// @brief Create a ray from camera origin to randomly sampled location around pixel i, j 
     ray get_ray(int i, int j) const{
-        // Create a ray from camera origin to randomly sampled location around pixel i, j 
         vec3 offset = sample_square();
         vec3 pixel_sample = pixel00_loc
                     + ((i + offset.x()) * pixel_delta_u)

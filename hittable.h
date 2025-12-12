@@ -5,7 +5,7 @@
 
 class hit_record {
   public:
-    point3 p;
+    point3 point_incident;
     vec3 normal;
     double t;
     bool front_face;
