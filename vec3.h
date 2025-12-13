@@ -132,4 +132,14 @@ inline vec3 reflect(const vec3& ray_in, const vec3& normal) {
     return ray_in - 2 * dot(ray_in, normal) * normal;
 }
 
+/// @param refract_index_ratio: index in over index out
+inline vec3 refract(const vec3&ray_in, const vec3&normal, double refract_index_ratio ) {
+    float cos_theta = std::fmin(dot(-ray_in, normal), 1.0);
+    vec3 ray_out_perp = refract_index_ratio*(ray_in + cos_theta * normal);
+    vec3 ray_out_para = -std::sqrt(std::fabs(1.0 - std::fabs(ray_out_perp.length_squared()))) * normal;
+
+    return ray_out_perp + ray_out_para;
+}
+
+
 #endif
