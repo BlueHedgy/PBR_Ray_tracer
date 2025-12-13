@@ -5,6 +5,7 @@
 #include "ray.h"
 #include "hittable.h"
 #include "hittable_list.h"
+#include "material.h"
 
 struct camera_params{
     int image_width; 
@@ -32,7 +33,15 @@ color ray_color(const ray& r, const hittable& world, int max_bounces, double ref
     if (world.hit(r, interval(0.001, Infinity), rec)){  // 0.001 tolerance for floating point rounding error
         // vec3 direction = random_uniform_on_hemisphere(rec.normal);
         vec3 direction = rec.normal + random_unit_vector();         // lambertian diffuse
-        return reflectance_coeff * ray_color(ray(rec.point_incident, direction), world, max_bounces - 1, reflectance_coeff);
+
+        ray scattered;
+        color attenuation;
+
+        if (rec.material->scatter(r, rec, attenuation, scattered)){
+            return attenuation * ray_color(scattered, world, max_bounces-1, reflectance_coeff);
+        }
+        // return reflectance_coeff * ray_color(ray(rec.point_incident, direction), world, max_bounces - 1, reflectance_coeff);
+        return color(0, 0, 0);
     }
 
     vec3 unit_direction = unit_vector(r.direction());

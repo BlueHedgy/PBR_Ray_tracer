@@ -52,6 +52,13 @@ class vec3 {
     static vec3 random(double min, double max) {
         return vec3(random_double(min,max), random_double(min,max), random_double(min,max));
     }
+    
+    /// @brief 
+    bool near_zero() const {
+        auto s = 1e-8;
+        return (std::fabs(e[0]) < s) && (std::fabs(e[1]) < s) && (std::fabs(e[2]) < s);
+    }
+
 };
 
 // point3 is just an alias for vec3, but useful for geometric clarity in the code.
@@ -90,8 +97,8 @@ inline vec3 operator/(const vec3& v, double t) {
 
 inline double dot(const vec3& u, const vec3& v) {
     return u.e[0] * v.e[0]
-         + u.e[1] * v.e[1]
-         + u.e[2] * v.e[2];
+    + u.e[1] * v.e[1]
+    + u.e[2] * v.e[2];
 }
 
 inline vec3 cross(const vec3& u, const vec3& v) {
@@ -119,6 +126,10 @@ inline vec3 random_uniform_on_hemisphere(const vec3 &normal){
     vec3 on_unit_sphere = random_unit_vector();
     if (dot(on_unit_sphere, normal) > 0) return on_unit_sphere;
     else return -on_unit_sphere; 
+}
+
+inline vec3 reflect(const vec3& ray_in, const vec3& normal) {
+    return ray_in - 2 * dot(ray_in, normal) * normal;
 }
 
 #endif
