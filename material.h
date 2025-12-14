@@ -89,9 +89,9 @@ class dielectric: public material {
     }
 };
 
-class meta_material : public material {
-  meta_material(){}
-  meta_material(){}
-};
+// class meta_material : public material {
+//   meta_material(){}
+//   meta_material(){}
+// };
 
 #endif

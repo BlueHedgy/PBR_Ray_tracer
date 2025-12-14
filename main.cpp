@@ -21,10 +21,25 @@ int main() {
   world.add(std::make_shared<sphere>(point3( 0.0,    0.0, -1.2),   0.5, material_center));
   world.add(std::make_shared<sphere>(point3(-1.0,    0.0, -1.0),   0.5, material_left));
   world.add(std::make_shared<sphere>(point3( 1.0,    0.0, -1.0),   0.5, material_right));
+
+
+  // auto R = std::cos(Pi/4);
+
+  // auto material_left  = std::make_shared<lambertian>(color(0,0,1));
+  // auto material_right = std::make_shared<lambertian>(color(1,0,0));
+
+  // world.add(std::make_shared<sphere>(point3(-R, 0, -1), R, material_left));
+  // world.add(std::make_shared<sphere>(point3( R, 0, -1), R, material_right));
   // Render
   Camera mainCamera = Camera(image_width, aspect_ratio, viewport_height, focal_length, world);
   mainCamera.enableAA = true;
   mainCamera.reflectance_coeff = 0.5;
+  mainCamera.verticalFOV = 90;
+  
+  mainCamera.look_from = point3(-2, 2, 1);
+  mainCamera.look_at = point3(0, 0, -1);
+  mainCamera.world_up = vec3(0, 1, 0);
+
   mainCamera.Render();
 
 }

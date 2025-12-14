@@ -55,15 +55,20 @@ class Camera {
     int sample_per_pixel = 4;
     int max_bounces = 10;
     double reflectance_coeff = 0.5;
+    double verticalFOV = 90;
+
+    point3 look_from = point3(0, 0, 0);
+    point3 look_at   = point3(0, 0, -1);
+    vec3   world_up  = vec3(0, 1, 0); 
+
+
     Camera(int imWidth, double aspectRatio, double viewportHeight, double focalLength, hittable_list& world_)
         : world(world_)
     {
         image_width = imWidth;
         aspect_ratio = aspectRatio;
         viewport_height = viewportHeight;
-        focal_length = focalLength;
-
-        initialize();
+        // focal_length = focalLength;
     }
     
     int ImageWidth(){ return image_width; }
@@ -85,6 +90,8 @@ class Camera {
 
 
     void Render(){
+        initialize();
+
         std::cout << "P3\n" << image_width << " " << image_height << "\n255\n";
 
         for (int j = 0; j < image_height; j++) {
@@ -133,6 +140,9 @@ class Camera {
 
     double pixel_samples_scale;         // Color scale factor for a sum of pixel samples
 
+    vec3 cam_right, cam_up, cam_front;
+
+
     /// @brief Get integer image height based on the aspect ratio of the image
     int get_imageHeight (int imWidth, double aspectRatio){
         int image_height = int (imWidth/ aspectRatio);
@@ -142,20 +152,31 @@ class Camera {
     void initialize(){
         image_height = get_imageHeight(image_width, aspect_ratio);
         pixel_samples_scale = 1.0 / sample_per_pixel;
-        camera_center = vec3(0.0, 0.0, 0.0);
-
+        camera_center = look_from;
+        
+        // Calculate camera parameters
+        cam_front = unit_vector(look_from - look_at);
+        cam_right = unit_vector(cross(world_up, cam_front));
+        cam_up    = cross(cam_front, cam_right);  
+        
+        // Calculate viewport dimensions
+        focal_length = (look_at - look_from).length();
+        double theta = degrees_to_radian(verticalFOV);
+        double h = std::tan(theta/2);
+        double viewport_height = 2 * h * focal_length;
         viewport_width = viewport_height * (double(image_width)/image_height);
         
         // Calculate the vectors across the horizontal and down the vertical viewport edges.
-        viewport_u = vec3(viewport_width, 0, 0);
-        viewport_v = vec3(0, -viewport_height, 0);
+        // viewport_u = vec3(viewport_width, 0, 0);
+        viewport_u = viewport_width * cam_right;
+        viewport_v = viewport_height * -cam_up;
 
         // Calculate the horizontal and vertical delta vectors from pixel to pixel.
         pixel_delta_u = viewport_u / image_width;
         pixel_delta_v = viewport_v / image_height;
 
         // Calculate the location of the upper left pixel.
-        viewport_upper_left = camera_center - vec3(0, 0, focal_length) - viewport_u/2 - viewport_v/2;
+        viewport_upper_left = camera_center - (focal_length  * cam_front) - viewport_u/2 - viewport_v/2;
         pixel00_loc = viewport_upper_left + 0.5 * (pixel_delta_u + pixel_delta_v);
     }
 
