@@ -2,6 +2,7 @@
 #define MATERIAL_H
 
 #include "hittable.h"
+#include "aabb.h"
 
 /// @brief Abstract material class
 class material {
