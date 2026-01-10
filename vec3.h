@@ -141,5 +141,14 @@ inline vec3 refract(const vec3&ray_in, const vec3&normal, double refract_index_r
     return ray_out_perp + ray_out_para;
 }
 
+/// @brief Randomize a point within a unit circle
+inline vec3 random_in_unit_disk() {
+    while (true) {
+        auto p = vec3(random_double(-1,1), random_double(-1,1), 0);
+        if (p.length_squared() < 1)
+            return p;
+    }
+}
+
 
 #endif

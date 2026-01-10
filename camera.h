@@ -59,7 +59,10 @@ class Camera {
 
     point3 look_from = point3(0, 0, 0);
     point3 look_at   = point3(0, 0, -1);
-    vec3   world_up  = vec3(0, 1, 0); 
+    vec3   world_up  = vec3(0, 1, 0);
+
+    double dof_angle = 0;
+    double focus_dist = 10;
 
 
     Camera(int imWidth, double aspectRatio, double viewportHeight, double focalLength, hittable_list& world_)
@@ -140,8 +143,8 @@ class Camera {
 
     double pixel_samples_scale;         // Color scale factor for a sum of pixel samples
 
-    vec3 cam_right, cam_up, cam_front;
-
+    vec3 cam_u, cam_v, cam_w;
+    vec3 defocus_disk_u, defocus_disk_v;
 
     /// @brief Get integer image height based on the aspect ratio of the image
     int get_imageHeight (int imWidth, double aspectRatio){
@@ -155,29 +158,34 @@ class Camera {
         camera_center = look_from;
         
         // Calculate camera parameters
-        cam_front = unit_vector(look_from - look_at);
-        cam_right = unit_vector(cross(world_up, cam_front));
-        cam_up    = cross(cam_front, cam_right);  
+        cam_w = unit_vector(look_from - look_at);
+        cam_u = unit_vector(cross(world_up, cam_w));
+        cam_v = cross(cam_w, cam_u);
         
         // Calculate viewport dimensions
-        focal_length = (look_at - look_from).length();
-        double theta = degrees_to_radian(verticalFOV);
+        // focal_length = (look_at - look_from).length();
+        double theta = degrees_to_radians(verticalFOV);
         double h = std::tan(theta/2);
-        double viewport_height = 2 * h * focal_length;
+        double viewport_height = 2 * h * focus_dist;
         viewport_width = viewport_height * (double(image_width)/image_height);
         
         // Calculate the vectors across the horizontal and down the vertical viewport edges.
         // viewport_u = vec3(viewport_width, 0, 0);
-        viewport_u = viewport_width * cam_right;
-        viewport_v = viewport_height * -cam_up;
+        viewport_u = viewport_width * cam_u;
+        viewport_v = viewport_height * -cam_v;
 
         // Calculate the horizontal and vertical delta vectors from pixel to pixel.
         pixel_delta_u = viewport_u / image_width;
         pixel_delta_v = viewport_v / image_height;
 
         // Calculate the location of the upper left pixel.
-        viewport_upper_left = camera_center - (focal_length  * cam_front) - viewport_u/2 - viewport_v/2;
+        viewport_upper_left = camera_center - (focus_dist * cam_w) - viewport_u/2 - viewport_v/2;
         pixel00_loc = viewport_upper_left + 0.5 * (pixel_delta_u + pixel_delta_v);
+
+        // Calculate the camera defocus disk basis vectors.
+        auto defocus_radius = focus_dist * std::tan(degrees_to_radians(dof_angle / 2));
+        defocus_disk_u = cam_u * defocus_radius;
+        defocus_disk_v = cam_v * defocus_radius;
     }
 
 
@@ -188,15 +196,23 @@ class Camera {
                     + ((i + offset.x()) * pixel_delta_u)
                     + ((j + offset.y()) * pixel_delta_v);
 
-        vec3 ray_origin = camera_center;
+        vec3 ray_origin = (dof_angle <= 0) ? camera_center: defocus_disk_sample();
         vec3 ray_direction = pixel_sample - ray_origin;
 
-        return ray(ray_origin, ray_direction);
+        double ray_time = random_double();
+
+        return ray(ray_origin, ray_direction, ray_time);
     }
 
     vec3 sample_square() const {
         // Returns the vector to a random point in the [-.5,-.5]-[+.5,+.5] unit square.
         return vec3(random_double() - 0.5, random_double() - 0.5, 0);
+    }
+
+    point3 defocus_disk_sample() const {
+        // Returns a random point in the camera defocus disk.
+        auto p = random_in_unit_disk();
+        return camera_center + (p[0] * defocus_disk_u) + (p[1] * defocus_disk_v);
     }
 
 };

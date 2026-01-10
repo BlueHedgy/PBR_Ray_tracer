@@ -12,7 +12,7 @@
 const double Infinity = std::numeric_limits<double>::infinity();
 const double Pi = 3.141592653589793285;
 
-inline double degrees_to_radian(double degrees){
+inline double degrees_to_radians(double degrees){
     return degrees * Pi / 180.0;
 }
 
