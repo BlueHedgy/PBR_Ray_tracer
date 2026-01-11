@@ -25,6 +25,7 @@ class bvh_node : public hittable {
         
         size_t object_span = end - start;
 
+        // if only one node left, duplicate to both side of the tree
         if (object_span == 1) {
             left = right = objects[start];
         }
