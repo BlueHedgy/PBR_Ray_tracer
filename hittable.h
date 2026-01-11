@@ -2,6 +2,7 @@
 #define HITTABLE_H
 
 #include "utils.h"
+#include "aabb.h"
 
 class material;
 

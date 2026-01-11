@@ -52,7 +52,7 @@ color ray_color(const ray& r, const hittable& world, int max_bounces, double ref
 class Camera {
   public:
     bool enableAA = true;   // Enable Anti-aliasing, default : true
-    int sample_per_pixel = 4;
+    int sample_per_pixel = 2;
     int max_bounces = 10;
     double reflectance_coeff = 0.5;
     double verticalFOV = 90;
