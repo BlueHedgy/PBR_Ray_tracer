@@ -16,7 +16,7 @@ if (CMAKE_<LANG>_COMPILER_ID STREQUAL "GNU")
 endif()
 
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/bin)
-
+include_directories(material)
 
 set(SOURCES
   main.cpp

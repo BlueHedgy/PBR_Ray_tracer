@@ -2,6 +2,7 @@
 #define MATERIAL_H
 
 #include "hittable.h"
+#include "texture.h"
 #include "aabb.h"
 
 /// @brief Abstract material class
@@ -73,7 +74,9 @@ class material {
 /// @brief  Simple lambertian material, always scattered
 class lambertian : public material {
   public:
-    lambertian (const color& albedo) : albedo (albedo){}
+    // lambertian (const color& albedo) : albedo (albedo){}
+    lambertian (const color& albedo) : texture(std::make_shared<solid_color>(albedo)) {}
+    lambertian (std::shared_ptr<texture>  texture) : texture(texture) {}
 
     bool scatter (const ray& ray_in, const hit_record& rec, color& attenuation, ray& ray_scattered) const{
       vec3 scatter_direction = rec.normal + random_unit_vector();
@@ -81,12 +84,12 @@ class lambertian : public material {
         scatter_direction = rec.normal;   // if scatter direction is near opposite, make it the normal
       }
       ray_scattered = ray(rec.point_incident, scatter_direction, ray_in.time());
-      attenuation = albedo;
+      attenuation = texture->value(rec.u, rec.v, rec.point_incident);
       return true;
     }
 
   private:
-    color albedo;
+    std::shared_ptr<texture> texture;
 };
 
 
