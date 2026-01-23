@@ -6,21 +6,12 @@
 #include "bvh.h"
 #include "bvh_custom.h"
 
-int main() {
+hittable_list bouncing_sphere() {
+  hittable_list world; 
 
-  int image_width = 400;
-  double aspect_ratio = 16.0 / 9.0;
-  double viewport_height = 2.0;
-  double focal_length = 1.0;
-
-  hittable_list world;
-
-  // auto ground_material = std::make_shared<lambertian>(color(0.5, 0.5, 0.5));
-  // world.add(std::make_shared<sphere>(point3(0,-1000,0), 1000, ground_material));
-
-  auto checker = std::make_shared<checker_texture>(0.32, color(.2, .3, .1), color(.9, .9, .9));
-  world.add(std::make_shared<sphere>(point3(0,-1000,0), 1000, std::make_shared<lambertian>(checker)));
-
+  auto ground_material = std::make_shared<lambertian>(color(0.5, 0.5, 0.5));
+  world.add(std::make_shared<sphere>(point3(0,-1000,0), 1000, ground_material));
+  
   for (int a = -11; a < 11; a++) {
     for (int b = -11; b < 11; b++) {
       auto choose_mat = random_double();
@@ -63,22 +54,64 @@ int main() {
   // world = hittable_list(std::make_shared<bvh_node_custom>(world));
   world = hittable_list(std::make_shared<bvh_node_custom>(world, 0, world.objects.size()));
 
+  return world;
 
-  // Render
-  Camera mainCamera = Camera(image_width, aspect_ratio, viewport_height, focal_length, world);
-  mainCamera.enableAA = true;
-  mainCamera.reflectance_coeff = 0.5;
-  mainCamera.verticalFOV = 90;
+}
 
-  mainCamera.look_from = point3(-2, 2, 1);
-  mainCamera.look_at = point3(0, 0, -1);
-  mainCamera.world_up = vec3(0, 1, 0);
-  mainCamera.max_bounces = 50;
-  mainCamera.sample_per_pixel = 100;
 
-  mainCamera.dof_angle = 0.0;
-  mainCamera.focus_dist = 3.4;
+hittable_list checkered_spheres() {
+  hittable_list world;
 
-  mainCamera.Render();
+  auto checker = std::make_shared<checker_texture>(0.21, color(0.2, 0.3, 0.1), color(0.9, 0.9, 0.9));
+  world.add(std::make_shared<sphere>(point3(0,-10, 0), 10, std::make_shared<lambertian>(checker)));
+  world.add(std::make_shared<sphere>(point3(0, 10, 0), 10, std::make_shared<lambertian>(checker)));
+
+  return world;
+}
+
+hittable_list earth() {
+  hittable_list world;
+
+  auto earth_texture = std::make_shared<image_texture>("earthmap.jpg"); // import image texture
+  auto earth_surface = std::make_shared<lambertian>(earth_texture);     // create earth surface MATERIAL using the earth texture
+  auto globe = std::make_shared<sphere>(point3(0,0,0), 2, earth_surface);
+
+  world.add(globe);
+  
+  return world;
+}
+
+
+int main() {
+  
+  hittable_list world;
+
+  switch (3) {
+    case 1: world = bouncing_sphere(); break;
+    case 2: world = checkered_spheres(); break;
+    case 3: world = earth(); break;
+  }
+
+  int image_width = 400;
+  double aspect_ratio = 16.0 / 9.0;
+  double viewport_height = 2.0;
+  double focal_length = 1.0;
+  
+    // Render
+  Camera cam = Camera(image_width, aspect_ratio, viewport_height, focal_length);
+  cam.enableAA = true;
+  cam.reflectance_coeff = 0.5;
+  cam.verticalFOV = 20;
+
+  cam.look_from = point3(13, 2, 3);
+  cam.look_at = point3(0, 0, 0);
+  cam.world_up = vec3(0, 1, 0);
+  cam.max_bounces = 50;
+  cam.sample_per_pixel = 100;
+
+  cam.dof_angle = 0.0;
+  cam.focus_dist = 3.4;
+
+  cam.Render(world);
 
 }

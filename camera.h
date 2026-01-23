@@ -65,9 +65,7 @@ class Camera {
     double focus_dist = 10;
 
 
-    Camera(int imWidth, double aspectRatio, double viewportHeight, double focalLength, hittable_list& world_)
-        : world(world_)
-    {
+    Camera(int imWidth, double aspectRatio, double viewportHeight, double focalLength) {
         image_width = imWidth;
         aspect_ratio = aspectRatio;
         viewport_height = viewportHeight;
@@ -92,7 +90,7 @@ class Camera {
     vec3 VP_Upper_Left(){ return viewport_upper_left; }
 
 
-    void Render(){
+    void Render(hittable_list& world){
         initialize();
 
         std::cout << "P3\n" << image_width << " " << image_height << "\n255\n";
@@ -102,7 +100,7 @@ class Camera {
             for (int i = 0; i < image_width; i++) {
                 if (enableAA){
                     color pixel_color = color(0, 0, 0);
-                    process_ray_samples(i, j, pixel_color);
+                    process_ray_samples(i, j, pixel_color, world);
                     write_color(std::cout,  pixel_samples_scale * pixel_color);
                 }
                 else{
@@ -119,7 +117,7 @@ class Camera {
         std::clog << "\rDone.                 \n";
     }
 
-    void process_ray_samples(int i, int j, color &pixel_color){
+    void process_ray_samples(int i, int j, color &pixel_color, hittable_list& world){
         for (int sample = 0; sample < sample_per_pixel; sample++){
             ray r = get_ray(i, j);
             pixel_color += ray_color(r, world, max_bounces, reflectance_coeff);
@@ -139,7 +137,6 @@ class Camera {
     vec3 pixel_delta_u, pixel_delta_v;
  
     vec3 viewport_upper_left, pixel00_loc;
-    hittable_list& world;
 
     double pixel_samples_scale;         // Color scale factor for a sum of pixel samples
 
