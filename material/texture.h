@@ -6,7 +6,7 @@
 #include "perlin.h"
 
 class texture {
-  public: 
+  public:
     virtual ~texture() = default;
     virtual color value(double u, double v, const point3& p) const = 0;
 
@@ -20,7 +20,7 @@ class solid_color : public texture {
 
     color value(double u, double v, const point3& p) const override {
       return albedo;
-    } 
+    }
   private:
     color albedo;
 };
@@ -28,11 +28,11 @@ class solid_color : public texture {
 
 class checker_texture : public texture {
   public:
-    checker_texture(double scale, std::shared_ptr<texture> even, std::shared_ptr<texture> odd) : 
+    checker_texture(double scale, std::shared_ptr<texture> even, std::shared_ptr<texture> odd) :
     inv_scale(1.0 / scale), even(even), odd(odd) {}
 
     checker_texture(double scale, const color& c1, const color& c2) :
-    checker_texture(scale, std::make_shared<solid_color>(c1), std::make_shared<solid_color>(c2)) {} 
+    checker_texture(scale, std::make_shared<solid_color>(c1), std::make_shared<solid_color>(c2)) {}
 
     color value(double u, double v, const point3& p) const override {
       int xInteger = int(std::floor(inv_scale * p.x()));
@@ -52,10 +52,10 @@ class checker_texture : public texture {
 
 
 class image_texture : public texture {
-  public: 
-     image_texture(const char* filename) : image(filename) {}
+  public:
+    image_texture(const char* filename) : image(filename) {}
 
-     color value (double u, double v, const point3& p) const override {
+    color value (double u, double v, const point3& p) const override {
       // no texture data, return solid cyan for debugging
       if (image.height() <= 0) return color(0, 1, 1);
 
@@ -69,7 +69,7 @@ class image_texture : public texture {
 
       double color_scale  = 1.0 / 255.0;
       return color(color_scale*pixel[0], color_scale*pixel[1], color_scale*pixel[2]);
-     }
+    }
 
   private:
      rtw_image image;
@@ -77,14 +77,16 @@ class image_texture : public texture {
 
 class noise_texture : public texture {
   public:
-   noise_texture() {}
-   
+   noise_texture(double scale) : scale(scale) {}
+
   color value (double u, double v, const point3& p) const override {
-    return color(1, 1, 1) * noise.noise(p);
+    // return color(1, 1, 1) * noise.noise(scale * p);
+    return color(1, 1, 1) * 0.5 * (1.0 + noise.noise(scale * p));
   }
-  
+
   private:
     perlin noise;
+    double scale;
 };
 
 #endif

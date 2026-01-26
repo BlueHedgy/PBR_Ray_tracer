@@ -84,7 +84,7 @@ hittable_list earth() {
 hittable_list perlin_spheres() {
   hittable_list world;
 
-  auto pertext = std::make_shared<noise_texture>();
+  auto pertext = std::make_shared<noise_texture>(10);
   world.add(
     std::make_shared<sphere>(
       point3(0, -1000, 0),
