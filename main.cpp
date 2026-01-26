@@ -7,11 +7,11 @@
 #include "bvh_custom.h"
 
 hittable_list bouncing_sphere() {
-  hittable_list world; 
+  hittable_list world;
 
   auto ground_material = std::make_shared<lambertian>(color(0.5, 0.5, 0.5));
   world.add(std::make_shared<sphere>(point3(0,-1000,0), 1000, ground_material));
-  
+
   for (int a = -11; a < 11; a++) {
     for (int b = -11; b < 11; b++) {
       auto choose_mat = random_double();
@@ -77,26 +77,56 @@ hittable_list earth() {
   auto globe = std::make_shared<sphere>(point3(0,0,0), 2, earth_surface);
 
   world.add(globe);
-  
+
+  return world;
+}
+
+hittable_list perlin_spheres() {
+  hittable_list world;
+
+  auto pertext = std::make_shared<noise_texture>();
+  world.add(
+    std::make_shared<sphere>(
+      point3(0, -1000, 0),
+      1000,
+      std::make_shared<lambertian>(pertext)
+    )
+  );
+
+  world.add(
+    std::make_shared<sphere>(
+      point3(0, 2, 0),
+      2,
+      std::make_shared<lambertian>(pertext)
+    )
+  );
+
   return world;
 }
 
 
-int main() {
-  
+int main(int argc, char* argv[]) {
+
+  int render_case = 1;
+
+  if (argc == 1) {
+    render_case = (int) *argv[0];
+  }
+
   hittable_list world;
 
-  switch (3) {
+  switch (4) {
     case 1: world = bouncing_sphere(); break;
     case 2: world = checkered_spheres(); break;
     case 3: world = earth(); break;
+    case 4: world = perlin_spheres(); break;
   }
 
   int image_width = 400;
   double aspect_ratio = 16.0 / 9.0;
   double viewport_height = 2.0;
   double focal_length = 1.0;
-  
+
     // Render
   Camera cam = Camera(image_width, aspect_ratio, viewport_height, focal_length);
   cam.enableAA = true;
