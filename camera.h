@@ -8,7 +8,7 @@
 #include "material.h"
 
 struct camera_params{
-    int image_width; 
+    int image_width;
     double aspect_ratio, viewport_height, focal_length;
 };
 
@@ -71,7 +71,7 @@ class Camera {
         viewport_height = viewportHeight;
         // focal_length = focalLength;
     }
-    
+
     int ImageWidth(){ return image_width; }
     int ImageHeight(){ return image_height; }
 
@@ -82,7 +82,7 @@ class Camera {
 
     vec3 ViewportU(){ return viewport_u; }
     vec3 ViewportV(){ return viewport_v; }
-    
+
     vec3 Pixel_DeltaU(){ return pixel_delta_u; }
     vec3 Pixel_DeltaV(){ return pixel_delta_v; }
 
@@ -107,7 +107,7 @@ class Camera {
                     vec3 pixel_center = pixel00_loc + (i * pixel_delta_u) + (j * pixel_delta_v);
                     vec3 ray_direction = pixel_center - camera_center;
                     ray r(camera_center, ray_direction);
-                    
+
                     color pixel_color = ray_color(r, world, max_bounces, reflectance_coeff);
                     write_color(std::cout, pixel_color);
                 }
@@ -117,14 +117,8 @@ class Camera {
         std::clog << "\rDone.                 \n";
     }
 
-    void process_ray_samples(int i, int j, color &pixel_color, hittable_list& world){
-        for (int sample = 0; sample < sample_per_pixel; sample++){
-            ray r = get_ray(i, j);
-            pixel_color += ray_color(r, world, max_bounces, reflectance_coeff);
-        }
-    }
 
-    
+
     private:
 
     int image_width, image_height;
@@ -135,7 +129,7 @@ class Camera {
 
     vec3 viewport_u, viewport_v;
     vec3 pixel_delta_u, pixel_delta_v;
- 
+
     vec3 viewport_upper_left, pixel00_loc;
 
     double pixel_samples_scale;         // Color scale factor for a sum of pixel samples
@@ -153,19 +147,19 @@ class Camera {
         image_height = get_imageHeight(image_width, aspect_ratio);
         pixel_samples_scale = 1.0 / sample_per_pixel;
         camera_center = look_from;
-        
+
         // Calculate camera parameters
         cam_w = unit_vector(look_from - look_at);
         cam_u = unit_vector(cross(world_up, cam_w));
         cam_v = cross(cam_w, cam_u);
-        
+    
         // Calculate viewport dimensions
         // focal_length = (look_at - look_from).length();
         double theta = degrees_to_radians(verticalFOV);
         double h = std::tan(theta/2);
         double viewport_height = 2 * h * focus_dist;
         viewport_width = viewport_height * (double(image_width)/image_height);
-        
+
         // Calculate the vectors across the horizontal and down the vertical viewport edges.
         // viewport_u = vec3(viewport_width, 0, 0);
         viewport_u = viewport_width * cam_u;
@@ -186,12 +180,18 @@ class Camera {
     }
 
 
-    /// @brief Create a ray from camera origin to randomly sampled location around pixel i, j 
+    void process_ray_samples(int i, int j, color &pixel_color, hittable_list& world){
+        for (int sample = 0; sample < sample_per_pixel; sample++){
+            ray r = get_ray(i, j);
+            pixel_color += ray_color(r, world, max_bounces, reflectance_coeff);
+        }
+    }
+    /// @brief Create a ray from camera origin to randomly sampled location around pixel i, j
     ray get_ray(int i, int j) const{
         vec3 offset = sample_square();
         vec3 pixel_sample = pixel00_loc
-                    + ((i + offset.x()) * pixel_delta_u)
-                    + ((j + offset.y()) * pixel_delta_v);
+        + ((i + offset.x()) * pixel_delta_u)
+        + ((j + offset.y()) * pixel_delta_v);
 
         vec3 ray_origin = (dof_angle <= 0) ? camera_center: defocus_disk_sample();
         vec3 ray_direction = pixel_sample - ray_origin;

@@ -20,6 +20,7 @@ include_directories(
   material
   external
   noises
+  primitives
 )
 
 set(SOURCES
