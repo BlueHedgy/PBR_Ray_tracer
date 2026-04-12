@@ -2,9 +2,12 @@
 #include "hittable.h"
 #include "hittable_list.h"
 #include "sphere.h"
+#include "quad.h"
 #include "camera.h"
 #include "bvh.h"
 #include "bvh_custom.h"
+
+#include <string>
 
 hittable_list bouncing_sphere() {
   hittable_list world;
@@ -30,7 +33,7 @@ hittable_list bouncing_sphere() {
         } else if (choose_mat < 0.95) {
           // metal
           auto albedo = color::random(0.5, 1);
-          auto fuzz = random_double(0, 0.5);
+          auto fuzz   = random_double(0, 0.5);
           sphere_material = std::make_shared<metal>(albedo, fuzz);
           world.add(std::make_shared<sphere>(center, 0.2, sphere_material));
         } else {
@@ -104,22 +107,51 @@ hittable_list perlin_spheres() {
   return world;
 }
 
+hittable_list quad_scene() {
+  hittable_list world;
+
+  auto left_red     = std::make_shared<lambertian>(color(1.0, 0.2, 0.2));
+  auto back_green   = std::make_shared<lambertian>(color(0.2, 1.0, 0.2));
+  auto right_blue   = std::make_shared<lambertian>(color(0.2, 0.2, 1.0));
+  auto upper_orange = std::make_shared<lambertian>(color(1.0, 0.5, 0.0));
+  auto lower_teal   = std::make_shared<lambertian>(color(0.2, 0.8, 0.8));
+
+  // Quads
+  world.add(std::make_shared<quad>(point3(-3,-2, 5), vec3(0, 0,-4), vec3(0, 4, 0), left_red));
+  world.add(std::make_shared<quad>(point3(-2,-2, 0), vec3(4, 0, 0), vec3(0, 4, 0), back_green));
+  world.add(std::make_shared<quad>(point3( 3,-2, 1), vec3(0, 0, 4), vec3(0, 4, 0), right_blue));
+  world.add(std::make_shared<quad>(point3(-2, 3, 1), vec3(4, 0, 0), vec3(0, 0, 4), upper_orange));
+  world.add(std::make_shared<quad>(point3(-2,-3, 5), vec3(4, 0, 0), vec3(0, 0,-4), lower_teal));
+
+  return world;
+}
+
 
 int main(int argc, char* argv[]) {
 
-  int render_case = 1;
+  // int render_case;
 
-  if (argc == 1) {
-    render_case = (int) *argv[0];
+  if (argc != 2) {
+    std::cout << "Wrong input, enter an integer only !!" << std::endl;
+    return -1;
+  }
+
+  int render_case;
+  try  {
+    render_case = std::stoi(argv[1]);
+  } catch (const std::exception& e) {
+    std::cerr << "Not an integer.\n";
+    return 1;
   }
 
   hittable_list world;
 
-  switch (4) {
+  switch (render_case) {
     case 1: world = bouncing_sphere(); break;
     case 2: world = checkered_spheres(); break;
     case 3: world = earth(); break;
     case 4: world = perlin_spheres(); break;
+    case 5: world = quad_scene(); break;
   }
 
   int image_width = 400;
@@ -129,18 +161,19 @@ int main(int argc, char* argv[]) {
 
     // Render
   Camera cam = Camera(image_width, aspect_ratio, viewport_height, focal_length);
-  cam.enableAA = true;
+  cam.enableAA          = true;
   cam.reflectance_coeff = 0.5;
-  cam.verticalFOV = 20;
+  cam.verticalFOV       = 80;
 
-  cam.look_from = point3(13, 2, 3);
-  cam.look_at = point3(0, 0, 0);
-  cam.world_up = vec3(0, 1, 0);
-  cam.max_bounces = 50;
-  cam.sample_per_pixel = 100;
+  cam.look_from         = point3(0, 0, 9);
+  cam.look_at           = point3(0, 0, 0);
+  cam.world_up          = vec3(0, 1, 0);
 
-  cam.dof_angle = 0.0;
-  cam.focus_dist = 3.4;
+  cam.max_bounces       = 50;
+  cam.sample_per_pixel  = 50;
+
+  cam.dof_angle         = 0.0;
+  cam.focus_dist        = 3.4;
 
   cam.Render(world);
 
