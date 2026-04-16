@@ -3,6 +3,7 @@
 #include "hittable_list.h"
 #include "sphere.h"
 #include "quad.h"
+#include "triangle.h"
 #include "camera.h"
 #include "bvh.h"
 #include "bvh_custom.h"
@@ -126,6 +127,26 @@ hittable_list quad_scene() {
   return world;
 }
 
+hittable_list tris_scene() {
+  hittable_list world;
+
+  auto left_red     = std::make_shared<lambertian>(color(1.0, 0.2, 0.2));
+  auto back_green   = std::make_shared<lambertian>(color(0.2, 1.0, 0.2));
+  auto right_blue   = std::make_shared<lambertian>(color(0.2, 0.2, 1.0));
+  auto upper_orange = std::make_shared<lambertian>(color(1.0, 0.5, 0.0));
+  auto lower_teal   = std::make_shared<lambertian>(color(0.2, 0.8, 0.8));
+
+  // Triangles
+  world.add(std::make_shared<triangle>(point3(-3,-2, 5), vec3(0, 0,-4), vec3(0, 4, 0), left_red));
+  world.add(std::make_shared<triangle>(point3(-3, 2, 1), vec3(0, 0, 4), vec3(0,-4, 0), back_green));
+  world.add(std::make_shared<triangle>(point3(-2,-2, 0), vec3(4, 0, 0), vec3(0, 4, 0), back_green));
+  world.add(std::make_shared<triangle>(point3( 3,-2, 1), vec3(0, 0, 4), vec3(0, 4, 0), right_blue));
+  world.add(std::make_shared<triangle>(point3(-2, 3, 1), vec3(4, 0, 0), vec3(0, 0, 4), upper_orange));
+  world.add(std::make_shared<triangle>(point3(-2,-3, 5), vec3(4, 0, 0), vec3(0, 0,-4), lower_teal));
+
+  return world;
+}
+
 
 int main(int argc, char* argv[]) {
 
@@ -152,6 +173,7 @@ int main(int argc, char* argv[]) {
     case 3: world = earth(); break;
     case 4: world = perlin_spheres(); break;
     case 5: world = quad_scene(); break;
+    case 6: world = tris_scene(); break;
   }
 
   int image_width = 400;
