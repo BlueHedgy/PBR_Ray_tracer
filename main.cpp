@@ -147,6 +147,22 @@ hittable_list tris_scene() {
   return world;
 }
 
+hittable_list simple_light() {
+  hittable_list world;
+
+  auto pertext = std::make_shared<noise_texture>(4);
+  world.add(std::make_shared<sphere>(point3(0,-1000,0), 1000, std::make_shared<lambertian>(pertext)));
+  world.add(std::make_shared<sphere>(point3(0,2,0), 2, std::make_shared<lambertian>(pertext)));
+
+  auto difflight = std::make_shared<diffuse_light>(color(0.3, 0.8, 0.4));
+  auto voronoi_light = std::make_shared<diffuse_light>(std::make_shared<image_texture>("worley.png"));
+  world.add(std::make_shared<sphere>(point3(0,7,0), 2, voronoi_light));
+  
+  // world.add(std::make_shared<quad>(point3(3,1,-2), vec3(2,0,0), vec3(0,2,0), difflight));
+  // world.add(std::make_shared<quad>(point3(3,1,-2), vec3(2,0,0), vec3(0,2,0), voronoi_light));
+
+  return world;
+}
 
 int main(int argc, char* argv[]) {
 
@@ -174,6 +190,7 @@ int main(int argc, char* argv[]) {
     case 4: world = perlin_spheres(); break;
     case 5: world = quad_scene(); break;
     case 6: world = tris_scene(); break;
+    case 7: world = simple_light(); break;
   }
 
   int image_width = 400;
@@ -185,10 +202,10 @@ int main(int argc, char* argv[]) {
   Camera cam = Camera(image_width, aspect_ratio, viewport_height, focal_length);
   cam.enableAA          = true;
   cam.reflectance_coeff = 0.5;
-  cam.verticalFOV       = 80;
+  cam.verticalFOV       = 20;
 
-  cam.look_from         = point3(0, 0, 9);
-  cam.look_at           = point3(0, 0, 0);
+  cam.look_from         = point3(26, 3, 6);
+  cam.look_at           = point3(0, 2, 0);
   cam.world_up          = vec3(0, 1, 0);
 
   cam.max_bounces       = 50;
@@ -196,6 +213,7 @@ int main(int argc, char* argv[]) {
 
   cam.dof_angle         = 0.0;
   cam.focus_dist        = 3.4;
+  cam.background        = color(0, 0, 0);
 
   cam.Render(world);
 

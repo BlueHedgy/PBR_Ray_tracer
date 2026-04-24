@@ -27,27 +27,6 @@ double hit_sphere(const point3& center, double radius, const ray& r) {
     return (h - std::sqrt(discriminant) ) / a;
 }
 
-color ray_color(const ray& r, const hittable& world, int max_bounces, double reflectance_coeff){
-    hit_record rec;
-    if (max_bounces <= 0) return color(0, 0, 0);
-    if (world.hit(r, interval(0.001, Infinity), rec)){  // 0.001 tolerance for floating point rounding error
-        // vec3 direction = random_uniform_on_hemisphere(rec.normal);
-        vec3 direction = rec.normal + random_unit_vector();         // lambertian diffuse
-
-        ray scattered;
-        color attenuation;
-
-        if (rec.material->scatter(r, rec, attenuation, scattered)){
-            return attenuation * ray_color(scattered, world, max_bounces-1, reflectance_coeff);
-        }
-        // return reflectance_coeff * ray_color(ray(rec.point_incident, direction), world, max_bounces - 1, reflectance_coeff);
-        return color(0, 0, 0);
-    }
-
-    vec3 unit_direction = unit_vector(r.direction());
-    auto a = 0.5*(unit_direction.y() + 1.0);
-    return (1.0-a)*color(1.0, 1.0, 1.0) + a*color(0.5, 0.7, 1.0);
-}
 
 class Camera {
   public:
@@ -56,6 +35,7 @@ class Camera {
     int max_bounces = 10;
     double reflectance_coeff = 0.5;
     double verticalFOV = 90;
+    color background;
 
     point3 look_from = point3(0, 0, 0);
     point3 look_at   = point3(0, 0, -1);
@@ -152,7 +132,7 @@ class Camera {
         cam_w = unit_vector(look_from - look_at);
         cam_u = unit_vector(cross(world_up, cam_w));
         cam_v = cross(cam_w, cam_u);
-    
+
         // Calculate viewport dimensions
         // focal_length = (look_at - look_from).length();
         double theta = degrees_to_radians(verticalFOV);
@@ -179,6 +159,28 @@ class Camera {
         defocus_disk_v = cam_v * defocus_radius;
     }
 
+    color ray_color(const ray& r, const hittable& world, int max_bounces, double reflectance_coeff){
+        if (max_bounces <= 0) return color(0, 0, 0);
+
+        hit_record rec;
+
+        if (!world.hit(r, interval(0.001, Infinity), rec)) {  // 0.001 tolerance for floating point rounding error
+            return background;
+        }
+        // vec3 direction = random_uniform_on_hemisphere(rec.normal);
+        // vec3 direction = rec.normal + random_unit_vector();         // lambertian diffuse
+
+        ray scattered;
+        color attenuation;
+        color color_from_emission = rec.material->emitted(rec.u, rec.v, rec.point_incident);
+
+        if (!rec.material->scatter(r, rec, attenuation, scattered)){
+            return color_from_emission;
+        }
+        color color_from_scatter =  attenuation * ray_color(scattered, world, max_bounces-1, reflectance_coeff);
+
+        return color_from_emission + color_from_scatter;    
+    }
 
     void process_ray_samples(int i, int j, color &pixel_color, hittable_list& world){
         for (int sample = 0; sample < sample_per_pixel; sample++){

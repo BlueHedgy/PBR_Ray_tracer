@@ -17,7 +17,11 @@ class material {
     virtual bool scatter(const ray& ray_in, const hit_record& rec, color& attenuation, ray& scattered) const {
       return false;
     }
-    
+
+    virtual color emitted(double u, double v, const point3& p) const {
+      return color(0, 0, 0);
+    }
+
   private:
 
     double fresnel_reflected (double &eta1, double &eta2, double &theta1, double &theta2) const {
@@ -44,6 +48,8 @@ class material {
       return f0 + (1.0 - f0) * pow((1.0 - dot(normal, half_vector)), 5);
     }
 
+  protected:
+
     double GGX_distribution(double &roughness, vec3 &normal, vec3 &half_vector) const {
       double alpha = roughness*roughness;
       return (alpha*alpha) / (Pi * pow( pow(dot(normal, half_vector), 2) * (alpha*alpha - 1) + 1, 2));
@@ -61,9 +67,9 @@ class material {
 
     double GGX_Schlick_approx_Geo(double &roughness, vec3 &normal, vec3 &view_direction) {
       double k = roughness*roughness / 2.0;
-      return dot(normal, view_direction) / (dot(normal, view_direction) * (1-k) + k); 
+      return dot(normal, view_direction) / (dot(normal, view_direction) * (1-k) + k);
     }
-    
+
     auto Cook_Torrance_Microfacet_BRDF() {
       return 1;
     }
@@ -105,7 +111,7 @@ class metal : public material {
       return (dot(ray_scattered.direction(), rec.normal) > 0);
     }
 
-  private: 
+  private:
     color albedo;
     double fuzz;
 };
@@ -148,6 +154,21 @@ class dielectric: public material {
       return r0 + (1-r0) * std::pow((1 - cosine), 5);
     }
 };
+
+
+class diffuse_light : public material {
+  public:
+    diffuse_light(std::shared_ptr<texture> tex) : tex(tex) {}
+    diffuse_light(const color& emit) : tex(std::make_shared<solid_color>(emit)) {}
+
+    color emitted(double u, double v, const point3& p) const override {
+      return tex->value(u, v, p);
+    }
+
+  private:
+    std::shared_ptr<texture> tex;
+};
+
 
 class meta_material : public material {
   public:
