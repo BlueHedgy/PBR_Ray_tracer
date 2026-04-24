@@ -12,7 +12,9 @@ set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 if (CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
-  set(CMAKE_CXX_FLAGS "-Wall -Wno-changes-meaning")
+  add_compile_options(-Wall -Wno-changes-meaning)
+elseif (MSVC)
+  add_compile_options(/W4 /permissive-)
 endif()
 
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/bin)
