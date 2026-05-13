@@ -6,6 +6,7 @@
 #include "hittable.h"
 #include "hittable_list.h"
 #include "material.h"
+#include <fstream>
 
 struct camera_params{
     int image_width;
@@ -73,30 +74,35 @@ class Camera {
     void Render(hittable_list& world){
         initialize();
 
-        std::cout << "P3\n" << image_width << " " << image_height << "\n255\n";
+        std::ofstream out("output.ppm");
+        if (!out) {
+            std::cerr << "Error: Could not open file for writing.\n";
+            return;
+        }
+
+        out << "P3\n" << image_width << " " << image_height << "\n255\n";
 
         for (int j = 0; j < image_height; j++) {
             std::clog << "\rScanlines remaining: " << (image_height - j) << ' ' << std::flush;
             for (int i = 0; i < image_width; i++) {
-                if (enableAA){
+                if (enableAA) {
                     color pixel_color = color(0, 0, 0);
                     process_ray_samples(i, j, pixel_color, world);
-                    write_color(std::cout,  pixel_samples_scale * pixel_color);
-                }
-                else{
+                    write_color(out, pixel_samples_scale * pixel_color);
+                } else {
                     vec3 pixel_center = pixel00_loc + (i * pixel_delta_u) + (j * pixel_delta_v);
                     vec3 ray_direction = pixel_center - camera_center;
                     ray r(camera_center, ray_direction);
 
                     color pixel_color = ray_color(r, world, max_bounces, reflectance_coeff);
-                    write_color(std::cout, pixel_color);
+                    write_color(out, pixel_color);
                 }
             }
         }
 
         std::clog << "\rDone.                 \n";
+        out.close();  // Explicitly close (optional, but good practice)
     }
-
 
 
     private:
@@ -167,19 +173,24 @@ class Camera {
         if (!world.hit(r, interval(0.001, Infinity), rec)) {  // 0.001 tolerance for floating point rounding error
             return background;
         }
-        // vec3 direction = random_uniform_on_hemisphere(rec.normal);
-        // vec3 direction = rec.normal + random_unit_vector();         // lambertian diffuse
 
-        ray scattered;
+        ray scattered;// or from emission
+        color pbr_color = rec.material->pbr_color(r, rec);
         color attenuation;
-        color color_from_emission = rec.material->emitted(rec.u, rec.v, rec.point_incident);
+
+        // color emission;
+
+        // if(rec.material->emitted(r, rec, emission)){
+        //     return emission;
+        // }
 
         if (!rec.material->scatter(r, rec, attenuation, scattered)){
-            return color_from_emission;
+            return pbr_color;
         }
-        color color_from_scatter =  attenuation * ray_color(scattered, world, max_bounces-1, reflectance_coeff);
 
-        return color_from_emission + color_from_scatter;    
+        color color_from_scatter = attenuation * ray_color(scattered, world, max_bounces-1, reflectance_coeff);
+
+        return pbr_color ;
     }
 
     void process_ray_samples(int i, int j, color &pixel_color, hittable_list& world){

@@ -18,7 +18,12 @@ class material {
       return false;
     }
 
-    virtual color emitted(double u, double v, const point3& p) const {
+    virtual bool emitted(const ray& ray_in, const hit_record& rec, color& emitted_color) const {
+      emitted_color = color(0, 0, 0);
+      return false;
+    }
+    
+    virtual color pbr_color(const ray& ray_in, const hit_record& rec) const {
       return color(0, 0, 0);
     }
 
@@ -43,22 +48,26 @@ class material {
       return 0.5 * pow((g-c)/(g+c), 2) * (1 + pow( (c*(g+c) - 1) / (c*(g-c) +1), 2));
     }
 
-    double schlick_approx_dielectric(double &eta1, double &eta2, vec3 &normal, vec3 &half_vector) const {
-      double f0 = fresnel_0_dielectric(eta1, eta2);
-      return f0 + (1.0 - f0) * pow((1.0 - dot(normal, half_vector)), 5);
+    vec3 schlick_approx_dielectric(double &eta1, double &eta2, const vec3 &view_direction, const vec3 &half_vector) const {
+      double fzero = fresnel_0_dielectric(eta1, eta2);
+      vec3 f0 = vec3(fzero, fzero, fzero);
+      return f0 + (vec3(1,1,1) - f0) * pow((1.0 - dot(view_direction, half_vector)), 5);
     }
 
   protected:
 
-    double GGX_distribution(double &roughness, vec3 &normal, vec3 &half_vector) const {
+    double GGX_distribution(double &roughness, const vec3& normal, const vec3& half_vector) const {
       double alpha = roughness*roughness;
-      return (alpha*alpha) / (Pi * pow( pow(dot(normal, half_vector), 2) * (alpha*alpha - 1) + 1, 2));
+      double dot_n_h = dot(normal, half_vector);
+      double x = dot_n_h > 0 ? 1: 0;
+      return x * (alpha*alpha) / (Pi * pow( pow(dot_n_h, 2) * (alpha*alpha - 1) + 1, 2));
     }
 
-    double Blinn_distribution(double &roughness, vec3 &normal, vec3 &half_vector) const {
+    double Blinn_distribution(double &roughness, const vec3& normal, const vec3& half_vector) const {
       double alpha = roughness*roughness;
-      double ns = 2*pow(alpha, -2) - 2;
-      return 1 / (Pi*alpha*alpha) * dot(normal, half_vector);
+      double ns = 2/(alpha*alpha) - 2;
+      double dot_h_n = dot(half_vector, normal);
+      return 1 / (Pi*alpha*alpha) * pow(dot_h_n, ns);
     }
 
     double Beckmann_distribution(double &alpha, vec3 &normal, vec3 &half_vector) {
@@ -70,11 +79,69 @@ class material {
       return dot(normal, view_direction) / (dot(normal, view_direction) * (1-k) + k);
     }
 
-    auto Cook_Torrance_Microfacet_BRDF() {
-      return 1;
+    double Cook_Torrance_Geo_term(const vec3& normal, const vec3& view_direction, const vec3& light_direction, const vec3& half_vector) const {
+      auto G1 = 2 * dot(half_vector, normal) * dot(normal, view_direction) / dot(view_direction, half_vector);
+      auto G2 = 2 * dot(half_vector, normal) * dot(normal, light_direction) / dot(view_direction, half_vector);
+
+      return std::min(1.00, std::min(G1, G2));
+    }
+
+    auto Cook_Torrance_Microfacet_BRDF(double roughness, double refraction_index, const vec3& normal, const vec3& view_direction, vec3& light_direction) const {
+      double air_index = 1;
+      vec3 half_vector = unit_vector(light_direction + view_direction);
+      // double D = Blinn_distribution(roughness, normal, half_vector);
+      auto D = GGX_distribution(roughness, normal, half_vector);
+      double G = Cook_Torrance_Geo_term(normal, view_direction, light_direction, half_vector);
+      vec3 F = schlick_approx_dielectric(refraction_index, air_index, normal, half_vector);
+
+
+      return D*G*F / (4 * dot(normal, light_direction) * dot(normal, view_direction));
     }
 };
 
+class pbr_material : public material {
+  public:
+    color albedo;
+    double diffuse_coeff;
+    point3 light_pos;
+
+    pbr_material (const color& albedo, const double& diffuse_coeff, const point3& light_pos) :
+      texture(std::make_shared<solid_color>(albedo)),
+      diffuse_coeff(diffuse_coeff),
+      light_pos(light_pos)
+    {}
+
+    pbr_material (const std::shared_ptr<texture> &texture, const double& diffuse_coeff, const point3& light_pos) :
+      texture(texture),
+      diffuse_coeff(diffuse_coeff),
+      light_pos(light_pos)
+    {}
+
+
+    color pbr_color(const ray& ray_in, const hit_record& rec) const override {
+      color diffuse = texture->value(rec.u, rec.v, rec.point_incident);
+      vec3 light_dir = unit_vector(light_pos - rec.point_incident);
+      auto specular = Cook_Torrance_Microfacet_BRDF(0.8, 0.58, rec.normal, -ray_in.direction(), light_dir);
+
+      color pbr =  (diffuse_coeff * diffuse / Pi + specular) *
+                    color(1, 1, 1) * dot(rec.normal, light_dir);
+      return pbr;
+    }
+
+    bool scatter (const ray& ray_in, const hit_record& rec, color& attenuation, ray& ray_scattered) const{
+      vec3 scatter_direction = rec.normal + random_unit_vector();
+      if (scatter_direction.near_zero()){
+        scatter_direction = rec.normal;   // if scatter direction is near opposite, make it the normal
+      }
+      ray_scattered = ray(rec.point_incident, scatter_direction, ray_in.time());
+      attenuation = pbr_color(ray_in, rec);
+      return true;
+    }
+
+  private:
+    std::shared_ptr<texture> texture;
+
+};
 
 
 /// @brief  Simple lambertian material, always scattered
@@ -158,21 +225,17 @@ class dielectric: public material {
 
 class diffuse_light : public material {
   public:
-    diffuse_light(std::shared_ptr<texture> tex) : tex(tex) {}
+    diffuse_light(std::shared_ptr<texture> tex) : tex(tex) {;}
     diffuse_light(const color& emit) : tex(std::make_shared<solid_color>(emit)) {}
 
-    color emitted(double u, double v, const point3& p) const override {
-      return tex->value(u, v, p);
+    bool emitted(const ray& ray_in, const hit_record& rec, color& emitted_color) const override {
+      emitted_color = tex->value(rec.u, rec.v, rec.point_incident);
+      return true;
     }
 
   private:
     std::shared_ptr<texture> tex;
 };
 
-
-class meta_material : public material {
-  public:
-    meta_material(){}
-};
 
 #endif

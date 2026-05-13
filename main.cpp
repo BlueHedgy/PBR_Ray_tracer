@@ -127,6 +127,27 @@ hittable_list quad_scene() {
   return world;
 }
 
+hittable_list sphere_pbr() {
+  hittable_list world;
+  vec3 light_pos = vec3(2000, 2000, -2000);
+  auto red    = std::make_shared<pbr_material>(color(1.0, 0.2, 0.2), 0.5, light_pos);
+  auto green  = std::make_shared<pbr_material>(color(0.2, 1.0, 0.2), 0.5, light_pos);
+  auto earth_texture = std::make_shared<image_texture>("earthmap.jpg"); // import image texture
+
+  auto earth_surface = std::make_shared<pbr_material>(earth_texture, 0.5, light_pos);     // create earth surface MATERIAL using the earth texture
+
+  world.add(std::make_shared<sphere>(point3(0, 0, 0), 2, earth_surface));
+  world.add(std::make_shared<sphere>(point3(3, 1, 0), 0.25, green));
+
+  auto voronoi_light = std::make_shared<diffuse_light>(std::make_shared<image_texture>("worley.png"));
+  world.add(std::make_shared<quad>(point3(1,1,1), vec3(1,1,-1), vec3(-1,1,1), voronoi_light));
+
+  // auto pertext = std::make_shared<noise_texture>(4);
+  // world.add(std::make_shared<sphere>(point3(0,-1005,0), 1000, std::make_shared<lambertian>(pertext)));
+  return world;
+}
+
+
 hittable_list tris_scene() {
   hittable_list world;
 
@@ -157,23 +178,19 @@ hittable_list simple_light() {
   auto difflight = std::make_shared<diffuse_light>(color(0.3, 0.8, 0.4));
   auto voronoi_light = std::make_shared<diffuse_light>(std::make_shared<image_texture>("worley.png"));
   world.add(std::make_shared<sphere>(point3(0,7,0), 2, voronoi_light));
-  
-  // world.add(std::make_shared<quad>(point3(3,1,-2), vec3(2,0,0), vec3(0,2,0), difflight));
-  // world.add(std::make_shared<quad>(point3(3,1,-2), vec3(2,0,0), vec3(0,2,0), voronoi_light));
 
   return world;
 }
 
 int main(int argc, char* argv[]) {
 
-  // int render_case;
+  int render_case;
 
   if (argc != 2) {
     std::cout << "Wrong input, enter an integer only !!" << std::endl;
     return -1;
   }
 
-  int render_case;
   try  {
     render_case = std::stoi(argv[1]);
   } catch (const std::exception& e) {
@@ -191,6 +208,7 @@ int main(int argc, char* argv[]) {
     case 5: world = quad_scene(); break;
     case 6: world = tris_scene(); break;
     case 7: world = simple_light(); break;
+    case 8: world = sphere_pbr(); break;
   }
 
   int image_width = 400;
@@ -202,14 +220,14 @@ int main(int argc, char* argv[]) {
   Camera cam = Camera(image_width, aspect_ratio, viewport_height, focal_length);
   cam.enableAA          = true;
   cam.reflectance_coeff = 0.5;
-  cam.verticalFOV       = 20;
+  cam.verticalFOV       = 90;
 
-  cam.look_from         = point3(26, 3, 6);
-  cam.look_at           = point3(0, 2, 0);
+  cam.look_from         = point3(0, 0, -5);
+  cam.look_at           = point3(0, 0, 0);
   cam.world_up          = vec3(0, 1, 0);
 
-  cam.max_bounces       = 50;
-  cam.sample_per_pixel  = 50;
+  cam.max_bounces       = 20;
+  cam.sample_per_pixel  = 100;
 
   cam.dof_angle         = 0.0;
   cam.focus_dist        = 3.4;
