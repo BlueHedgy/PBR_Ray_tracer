@@ -165,7 +165,7 @@ class Camera {
         defocus_disk_v = cam_v * defocus_radius;
     }
 
-    color ray_color(const ray& r, const hittable& world, int max_bounces, double reflectance_coeff){
+    color ray_color(const ray& r, const hittable& world, int max_bounces, double reflectance_coeff, bool& isEmissive, vec3& hit_point){
         if (max_bounces <= 0) return color(0, 0, 0);
 
         hit_record rec;
@@ -175,22 +175,32 @@ class Camera {
         }
 
         ray scattered;// or from emission
-        color pbr_color = rec.material->pbr_color(r, rec);
+        color pbr_color = rec.material->pbr_color(r, rec, vec3(2000, 2000, -2000));
         color attenuation;
 
-        // color emission;
+        color emission;
 
-        // if(rec.material->emitted(r, rec, emission)){
-        //     return emission;
-        // }
-
-        if (!rec.material->scatter(r, rec, attenuation, scattered)){
-            return pbr_color;
+        if (rec.material->emitted(r, rec, emission)){
+            hit_point = rec.point_incident;
+            isEmissive = true;
+            return emission;
         }
 
-        color color_from_scatter = attenuation * ray_color(scattered, world, max_bounces-1, reflectance_coeff);
+        bool nextEmissive;
+        vec3 next_hit_point;
+        color next_ray_diffuse = ray_color(scattered, world, max_bounces-1, reflectance_coeff, nextEmissive, next_hit_point);
 
-        return pbr_color ;
+        if (!rec.material->scatter(r, rec, attenuation,scattered)){
+            
+        }
+        color next_ray_color;
+        if (nextEmissive) {
+            next_ray_color = rec.material->pbr_color(r, rec, next_hit_point);
+        }
+
+        color color_from_scatter = attenuation * next_ray_color;
+
+        return pbr_color + emission + color_from_scatter;
     }
 
     void process_ray_samples(int i, int j, color &pixel_color, hittable_list& world){

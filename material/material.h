@@ -22,8 +22,8 @@ class material {
       emitted_color = color(0, 0, 0);
       return false;
     }
-    
-    virtual color pbr_color(const ray& ray_in, const hit_record& rec) const {
+
+    virtual color pbr_color(const ray& ray_in, const hit_record& rec, const point3& light_pos) const {
       return color(0, 0, 0);
     }
 
@@ -101,7 +101,6 @@ class material {
 
 class pbr_material : public material {
   public:
-    color albedo;
     double diffuse_coeff;
     point3 light_pos;
 
@@ -118,13 +117,14 @@ class pbr_material : public material {
     {}
 
 
-    color pbr_color(const ray& ray_in, const hit_record& rec) const override {
+    color pbr_color(const ray& ray_in, const hit_record& rec, const point3& light_pos) const override {
       color diffuse = texture->value(rec.u, rec.v, rec.point_incident);
       vec3 light_dir = unit_vector(light_pos - rec.point_incident);
       auto specular = Cook_Torrance_Microfacet_BRDF(0.8, 0.58, rec.normal, -ray_in.direction(), light_dir);
 
-      color pbr =  (diffuse_coeff * diffuse / Pi + specular) *
+      color pbr =  (diffuse_coeff * diffuse / Pi + specular * (1.00-diffuse_coeff)) *
                     color(1, 1, 1) * dot(rec.normal, light_dir);
+
       return pbr;
     }
 
@@ -134,7 +134,7 @@ class pbr_material : public material {
         scatter_direction = rec.normal;   // if scatter direction is near opposite, make it the normal
       }
       ray_scattered = ray(rec.point_incident, scatter_direction, ray_in.time());
-      attenuation = pbr_color(ray_in, rec);
+      // attenuation = pbr_color(ray_in, rec );
       return true;
     }
 
@@ -232,6 +232,7 @@ class diffuse_light : public material {
       emitted_color = tex->value(rec.u, rec.v, rec.point_incident);
       return true;
     }
+
 
   private:
     std::shared_ptr<texture> tex;
