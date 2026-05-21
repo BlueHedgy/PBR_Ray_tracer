@@ -71,10 +71,10 @@ class Camera {
     vec3 VP_Upper_Left(){ return viewport_upper_left; }
 
 
-    void Render(hittable_list& world){
+    void Render(hittable_list& world, const std::string& filename){
         initialize();
 
-        std::ofstream out("output.ppm");
+        std::ofstream out(filename);
         if (!out) {
             std::cerr << "Error: Could not open file for writing.\n";
             return;
@@ -94,7 +94,9 @@ class Camera {
                     vec3 ray_direction = pixel_center - camera_center;
                     ray r(camera_center, ray_direction);
 
-                    color pixel_color = ray_color(r, world, max_bounces, reflectance_coeff);
+                    bool isEmissive;
+                    vec3 hit_point;
+                    color pixel_color = ray_color(r, world, max_bounces, reflectance_coeff, isEmissive, hit_point);
                     write_color(out, pixel_color);
                 }
             }
@@ -175,38 +177,41 @@ class Camera {
         }
 
         ray scattered;// or from emission
-        color pbr_color = rec.material->pbr_color(r, rec, vec3(2000, 2000, -2000));
-        color attenuation;
+        color pbr_color;
 
-        color emission;
-
-        if (rec.material->emitted(r, rec, emission)){
-            hit_point = rec.point_incident;
-            isEmissive = true;
-            return emission;
+        if (!rec.material->scatter(r, rec, pbr_color,scattered)){
+            color emission;
+            if (rec.material->emitted(r, rec, emission)){
+                hit_point = rec.point_incident;
+                isEmissive = true;
+                return emission;
+            }
         }
 
-        bool nextEmissive;
+        // getting info whether we need to check for emission after current bound
+        bool nextEmissive = false;
         vec3 next_hit_point;
-        color next_ray_diffuse = ray_color(scattered, world, max_bounces-1, reflectance_coeff, nextEmissive, next_hit_point);
-
-        if (!rec.material->scatter(r, rec, attenuation,scattered)){
-            
-        }
         color next_ray_color;
-        if (nextEmissive) {
-            next_ray_color = rec.material->pbr_color(r, rec, next_hit_point);
+        color color_from_emission;
+
+        next_ray_color = ray_color(scattered, world, max_bounces-1, reflectance_coeff, nextEmissive, next_hit_point);
+
+        if(nextEmissive){
+            color_from_emission = rec.material->pbr_color(r, rec, next_ray_color, next_hit_point);
         }
 
-        color color_from_scatter = attenuation * next_ray_color;
+        // attenuating the incoming ray from next bounce
+        color color_from_scatter = pbr_color * next_ray_color;
 
-        return pbr_color + emission + color_from_scatter;
+        return pbr_color + color_from_emission /* + color_from_scatter */;
     }
 
     void process_ray_samples(int i, int j, color &pixel_color, hittable_list& world){
         for (int sample = 0; sample < sample_per_pixel; sample++){
             ray r = get_ray(i, j);
-            pixel_color += ray_color(r, world, max_bounces, reflectance_coeff);
+            bool isEmissive;
+            vec3 hit_point;
+            pixel_color += ray_color(r, world, max_bounces, reflectance_coeff, isEmissive, hit_point);
         }
     }
     /// @brief Create a ray from camera origin to randomly sampled location around pixel i, j
