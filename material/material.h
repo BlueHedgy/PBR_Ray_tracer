@@ -23,7 +23,7 @@ class material {
       return false;
     }
 
-    virtual color pbr_color(const ray& ray_in, const hit_record& rec, const point3& light_pos) const {
+    virtual color pbr_color(const ray& ray_in, const hit_record& rec, const color& light_color, const point3& light_pos) const {
       return color(0, 0, 0);
     }
 
@@ -104,26 +104,62 @@ class pbr_material : public material {
     double diffuse_coeff;
     point3 light_pos;
 
-    pbr_material (const color& albedo, const double& diffuse_coeff, const point3& light_pos) :
-      texture(std::make_shared<solid_color>(albedo)),
+    pbr_material (
+      const color& albedo,
+      const double& roughness,
+      const double& diffuse_coeff,
+      const point3& light_pos)
+      :
+      albedo(std::make_shared<solid_color>(albedo)),
+      roughness(std::make_shared<solid_color>(roughness)),
       diffuse_coeff(diffuse_coeff),
       light_pos(light_pos)
     {}
 
-    pbr_material (const std::shared_ptr<texture> &texture, const double& diffuse_coeff, const point3& light_pos) :
-      texture(texture),
+    pbr_material (
+      const std::shared_ptr<texture> &albedo,
+      const std::shared_ptr<texture> &roughness,
+      const double& diffuse_coeff,
+      const point3& light_pos)
+      :
+      albedo(albedo),
+      roughness(roughness),
       diffuse_coeff(diffuse_coeff),
       light_pos(light_pos)
     {}
 
+    pbr_material (
+      const std::shared_ptr<texture> &albedo,
+      const double& roughness,
+      const double& diffuse_coeff,
+      const point3& light_pos)
+      :
+      albedo(albedo),
+      roughness(std::make_shared<solid_color>(roughness)),
+      diffuse_coeff(diffuse_coeff),
+      light_pos(light_pos)
+    {}
 
-    color pbr_color(const ray& ray_in, const hit_record& rec, const point3& light_pos) const override {
-      color diffuse = texture->value(rec.u, rec.v, rec.point_incident);
+    pbr_material (
+      const color& albedo,
+      const std::shared_ptr<texture> &roughness,
+      const double& diffuse_coeff,
+      const point3& light_pos)
+      :
+      albedo(std::make_shared<solid_color>(albedo)),
+      roughness(roughness),
+      diffuse_coeff(diffuse_coeff),
+      light_pos(light_pos)
+    {}
+
+    color pbr_color(const ray& ray_in, const hit_record& rec, const color& light_color, const point3& light_pos) const override {
+      color albedo_value = albedo->value(rec.u, rec.v, rec.point_incident);
+      double roughness_value = roughness->value(rec.u, rec.v, rec.point_incident)[0];
       vec3 light_dir = unit_vector(light_pos - rec.point_incident);
-      auto specular = Cook_Torrance_Microfacet_BRDF(0.8, 0.58, rec.normal, -ray_in.direction(), light_dir);
+      auto specular = Cook_Torrance_Microfacet_BRDF(roughness_value, 0.58, rec.normal, -ray_in.direction(), light_dir);
 
-      color pbr =  (diffuse_coeff * diffuse / Pi + specular * (1.00-diffuse_coeff)) *
-                    color(1, 1, 1) * dot(rec.normal, light_dir);
+      color pbr =  (diffuse_coeff * albedo_value / Pi + specular * (1.00-diffuse_coeff)) *
+                    light_color * dot(rec.normal, light_dir);
 
       return pbr;
     }
@@ -134,12 +170,13 @@ class pbr_material : public material {
         scatter_direction = rec.normal;   // if scatter direction is near opposite, make it the normal
       }
       ray_scattered = ray(rec.point_incident, scatter_direction, ray_in.time());
-      // attenuation = pbr_color(ray_in, rec );
+      attenuation = pbr_color(ray_in, rec, color(1, 1, 1), light_pos);
       return true;
     }
 
   private:
-    std::shared_ptr<texture> texture;
+    std::shared_ptr<texture> albedo;
+    std::shared_ptr<texture> roughness;
 
 };
 
