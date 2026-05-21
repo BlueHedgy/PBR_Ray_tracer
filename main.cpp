@@ -132,17 +132,17 @@ hittable_list sphere_pbr() {
   vec3 light_pos = vec3(2000, 2000, -2000);
   auto earth_texture = std::make_shared<image_texture>("earthmap.jpg"); // import image texture
 
-  auto red    = std::make_shared<pbr_material>(color(1.0, 0.2, 0.2), 0.5, light_pos);
-  auto green  = std::make_shared<pbr_material>(color(0.2, 1.0, 0.2), 0.5, light_pos);
-  auto earth_surface = std::make_shared<pbr_material>(earth_texture, 0.1, light_pos);
+  auto red    = std::make_shared<pbr_material>(color(1.0, 0.2, 0.2), 0.8, 0.5, light_pos);
+  auto green  = std::make_shared<pbr_material>(color(0.2, 1.0, 0.2), 0.8, 0.5, light_pos);
+  auto earth_surface = std::make_shared<pbr_material>(earth_texture, 0.8, 0.3, light_pos);
 
-  world.add(std::make_shared<sphere>(point3(-1, 0, 0), 1, earth_surface));
+  world.add(std::make_shared<sphere>(point3(1, 0, 0), 1, earth_surface));
   world.add(std::make_shared<sphere>(point3(3, 1, 0), 0.25, green));
 
-  auto left_red     = std::make_shared<lambertian>(color(1.0, 0.2, 0.2));
+  // auto left_red     = std::make_shared<lambertian>(color(1.0, 0.2, 0.2));
   // world.add(std::make_shared<sphere>(point3(-1,0,0), 1, left_red));
 
-  auto difflight = std::make_shared<diffuse_light>(color(4, 4, 4));
+  auto difflight = std::make_shared<diffuse_light>(color(100, 100, 100  ));
   world.add(std::make_shared<quad>(point3(-3,3,0), vec3(-3,-2,0), vec3(-3,-2,-3), difflight));
 
 
@@ -178,7 +178,7 @@ hittable_list simple_light() {
   world.add(std::make_shared<sphere>(point3(0,-1000,0), 1000, std::make_shared<lambertian>(pertext)));
   world.add(std::make_shared<sphere>(point3(0,2,0), 2, std::make_shared<lambertian>(pertext)));
 
-  auto difflight = std::make_shared<diffuse_light>(color(4, 4, 4));
+  auto difflight = std::make_shared<diffuse_light>(color(1, 1, 1));
   auto voronoi_light = std::make_shared<diffuse_light>(std::make_shared<image_texture>("worley.png"));
   // world.add(std::make_shared<sphere>(point3(0,7,0), 2, difflight));
   world.add(std::make_shared<quad>(point3(3,1,-2), vec3(2,0,0), vec3(0,2,0), difflight));
@@ -188,21 +188,24 @@ hittable_list simple_light() {
 int main(int argc, char* argv[]) {
 
   int render_case;
+  std::string filename;
 
-  // if (argc != 2) {
-  //   std::cout << "Wrong input, enter an integer only !!" << std::endl;
-  //   return -1;
-  // }
+  if (argc != 3) {
+    std::cout << "Command: render_case filename !!" << std::endl;
+    return -1;
+  }
 
-  // try  {
-  //   render_case = std::stoi(argv[1]);
-  // } catch (const std::exception& e) {
-  //   std::cerr << "Not an integer.\n";
-  //   return 1;
-  // }
+  try  {
+    render_case = std::stoi(argv[1]);
+  } catch (const std::exception& e) {
+    std::cerr << "render_case NOT an integer.\n";
+    return 1;
+  }
+
+  filename = argv[2];
 
   hittable_list world;
-  render_case = 8;
+  // render_case = 8;
   switch (render_case) {
     case 1: world = bouncing_sphere(); break;
     case 2: world = checkered_spheres(); break;
@@ -236,6 +239,6 @@ int main(int argc, char* argv[]) {
   cam.focus_dist        = 3.4;
   cam.background        = color(0, 0, 0);
 
-  cam.Render(world);
+  cam.Render(world, filename);
 
 }
