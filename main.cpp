@@ -129,21 +129,80 @@ hittable_list quad_scene() {
 
 hittable_list sphere_pbr() {
   hittable_list world;
-  vec3 light_pos = vec3(2000, 2000, -2000);
+  vec3 light_pos = vec3(50, 50, -50);
   auto earth_texture = std::make_shared<image_texture>("earthmap.jpg"); // import image texture
 
-  auto red    = std::make_shared<pbr_material>(color(1.0, 0.2, 0.2), 0.8, 0.5, light_pos);
-  auto green  = std::make_shared<pbr_material>(color(0.2, 1.0, 0.2), 0.8, 0.5, light_pos);
-  auto earth_surface = std::make_shared<pbr_material>(earth_texture, 0.8, 0.3, light_pos);
+  // auto red    = std::make_shared<pbr_material>(color(1.0, 0.2, 0.2), 0.8, 0.5, light_pos);
+  // auto green  = std::make_shared<pbr_material>(color(0.2, 1.0, 0.2), 0.8, 0.5, light_pos);
+  auto earth_surface = std::make_shared<pbr_material>(
+    earth_texture,
+    color(0.8, 0.8, 0.8),
+    color(0.8, 0.8, 0.8),
+    0.3,
+    light_pos);
 
   world.add(std::make_shared<sphere>(point3(1, 0, 0), 1, earth_surface));
-  world.add(std::make_shared<sphere>(point3(3, 1, 0), 0.25, green));
+  // world.add(std::make_shared<sphere>(point3(3, 1, 0), 0.25, green));
 
   // auto left_red     = std::make_shared<lambertian>(color(1.0, 0.2, 0.2));
   // world.add(std::make_shared<sphere>(point3(-1,0,0), 1, left_red));
 
   auto difflight = std::make_shared<diffuse_light>(color(100, 100, 100  ));
-  world.add(std::make_shared<quad>(point3(-3,3,0), vec3(-3,-2,0), vec3(-3,-2,-3), difflight));
+  world.add(std::make_shared<quad>(point3(-1,1,0), vec3(-1,-1,0), vec3(-1,-1,-1), difflight));
+
+
+
+  return world;
+}
+
+hittable_list metal_sphere_pbr() {
+  hittable_list world;
+  vec3 light_pos = vec3(2000, 2000, 2000);
+  auto metal_color = std::make_shared<image_texture>("rustediron2_basecolor.png"); // import image texture
+  auto metal_roughness = std::make_shared<image_texture>("rustediron2_roughness.png"); // import image texture
+  auto metal_metalness = std::make_shared<image_texture>("rustediron2_metallic.png"); // import image texture
+
+  auto red    = std::make_shared<pbr_material>(
+    color(1.0, 0.2, 0.2),
+    color(.8, .8, .8),
+    color(.4, .4, .4),
+    0.2,
+    light_pos
+  );
+
+  auto green    = std::make_shared<pbr_material>(
+    color(0.2, 1.0, 0.2),
+    color(.8, .8, .8),
+    color(.4, .4, .4),
+    0.2,
+    light_pos
+  );
+
+  auto gray    = std::make_shared<pbr_material>(
+    color(0.8, 0.8, 0.8),
+    color(.8, .8, .8),
+    color(.4, .4, .4),
+    0.2,
+    light_pos
+  );
+
+
+  auto metal_sphere = std::make_shared<pbr_material>(
+    metal_color,
+    metal_metalness,
+    metal_roughness,
+    0.3,
+    light_pos);
+
+  world.add(std::make_shared<sphere>(point3(-1, 1, 0), 1, red));
+  world.add(std::make_shared<sphere>(point3(1, 0, 0), 1, metal_sphere));
+  world.add(std::make_shared<sphere>(point3(0, -101, 0), 100, gray));
+
+
+  auto difflight = std::make_shared<diffuse_light>(color(0, 0, 100));
+  auto difflight1 = std::make_shared<diffuse_light>(color(10, 10, 0));
+  world.add(std::make_shared<quad>(point3(2.5, 2, -2), vec3(0, -3, 0), vec3(0, 0, 3), difflight));
+  world.add(std::make_shared<quad>(point3(-2.5, 2, -2), vec3(0, -3, 0), vec3(0, 0, 3), difflight1));
 
 
 
@@ -215,9 +274,10 @@ int main(int argc, char* argv[]) {
     case 6: world = tris_scene(); break;
     case 7: world = simple_light(); break;
     case 8: world = sphere_pbr(); break;
+    case 9: world = metal_sphere_pbr(); break;
   }
 
-  int image_width = 400;
+  int image_width = 1000;
   double aspect_ratio = 16.0 / 9.0;
   double viewport_height = 2.0;
   double focal_length = 1.0;
@@ -228,12 +288,12 @@ int main(int argc, char* argv[]) {
   cam.reflectance_coeff = 0.5;
   cam.verticalFOV       = 60;
 
-  cam.look_from         = point3(0, 0, -5);
+  cam.look_from         = point3(0, 0, 5);
   cam.look_at           = point3(0, 0, 0);
   cam.world_up          = vec3(0, 1, 0);
 
   cam.max_bounces       = 20;
-  cam.sample_per_pixel  = 100;
+  cam.sample_per_pixel  = 200;
 
   cam.dof_angle         = 0.0;
   cam.focus_dist        = 3.4;

@@ -129,11 +129,11 @@ class pbr_material : public material {
     {}
 
     color pbr_color(const ray& ray_in, const hit_record& rec, const color& light_color, const point3& light_pos) const override {
-      color albedo_value = albedo->value(rec.u, rec.v, rec.point_incident);
+      color  albedo_value    = albedo->value(rec.u, rec.v, rec.point_incident);
       double roughness_value = roughness->value(rec.u, rec.v, rec.point_incident)[0];
-      double metal_value = metalness->value(rec.u, rec.v, rec.point_incident)[0];
-      vec3 light_dir = unit_vector(light_pos - rec.point_incident);
-      auto specular = Cook_Torrance_Microfacet_BRDF(albedo_value, metal_value, roughness_value, 0.58, rec.normal, -ray_in.direction(), light_dir);
+      double metal_value     = metalness->value(rec.u, rec.v, rec.point_incident)[0];
+      vec3   light_dir       = unit_vector(light_pos - rec.point_incident);
+      auto   specular        = Cook_Torrance_Microfacet_BRDF(albedo_value, metal_value, roughness_value, 0.58, rec.normal, -ray_in.direction(), light_dir);
 
       color pbr =  (diffuse_coeff * albedo_value / Pi + specular * (1.00-diffuse_coeff)) *
                     light_color * dot(rec.normal, light_dir);
