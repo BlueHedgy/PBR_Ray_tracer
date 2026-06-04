@@ -7,7 +7,7 @@
 #include "camera.h"
 #include "bvh.h"
 #include "bvh_custom.h"
-
+#include "gui_setup.h"
 #include <string>
 
 hittable_list bouncing_sphere() {
@@ -299,6 +299,9 @@ int main(int argc, char* argv[]) {
   cam.focus_dist        = 3.4;
   cam.background        = color(0, 0, 0);
 
-  cam.Render(world, filename);
+  // cam.Render(world, filename);
+
+  GUI_Handler GUI(cam, world, filename);
+  GUI.SETUP();
 
 }
