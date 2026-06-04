@@ -10,10 +10,10 @@
 
 struct camera_params{
     int image_width;
-    double aspect_ratio, viewport_height, focal_length;
+    float aspect_ratio, viewport_height, focal_length;
 };
 
-double hit_sphere(const point3& center, double radius, const ray& r) {
+float hit_sphere(const point3& center, float radius, const ray& r) {
     vec3 oc = center - r.origin();
     auto a = r.direction().length_squared();
     auto h = dot(r.direction(),oc); // b = -2h
@@ -34,19 +34,23 @@ class Camera {
     bool enableAA = true;   // Enable Anti-aliasing, default : true
     int sample_per_pixel = 2;
     int max_bounces = 10;
-    double reflectance_coeff = 0.5;
-    double verticalFOV = 90;
+    float reflectance_coeff = 0.5;
+    float verticalFOV = 90;
     color background;
 
     point3 look_from = point3(0, 0, 0);
     point3 look_at   = point3(0, 0, -1);
     vec3   world_up  = vec3(0, 1, 0);
 
-    double dof_angle = 0;
-    double focus_dist = 10;
+    float lookFrom[3] = {0, 0, 0};
+    float lookAt[3] = {0, 0 , -1};
 
 
-    Camera(int imWidth, double aspectRatio, double viewportHeight, double focalLength) {
+    float dof_angle = 0;
+    float focus_dist = 10;
+
+
+    Camera(int imWidth, float aspectRatio, float viewportHeight, float focalLength) {
         image_width = imWidth;
         aspect_ratio = aspectRatio;
         viewport_height = viewportHeight;
@@ -59,7 +63,7 @@ class Camera {
     vec3 getCenter(){ return camera_center; }
     void setCenter(vec3 newPosition){ camera_center = newPosition; }
 
-    double getAspectRatio(){ return aspect_ratio; }
+    float getAspectRatio(){ return aspect_ratio; }
 
     vec3 ViewportU(){ return viewport_u; }
     vec3 ViewportV(){ return viewport_v; }
@@ -112,21 +116,21 @@ class Camera {
     int image_width, image_height;
     vec3 camera_center;
 
-    double aspect_ratio, focal_length;
-    double viewport_width, viewport_height;
+    float aspect_ratio, focal_length;
+    float viewport_width, viewport_height;
 
     vec3 viewport_u, viewport_v;
     vec3 pixel_delta_u, pixel_delta_v;
 
     vec3 viewport_upper_left, pixel00_loc;
 
-    double pixel_samples_scale;         // Color scale factor for a sum of pixel samples
+    float pixel_samples_scale;         // Color scale factor for a sum of pixel samples
 
     vec3 cam_u, cam_v, cam_w;
     vec3 defocus_disk_u, defocus_disk_v;
 
     /// @brief Get integer image height based on the aspect ratio of the image
-    int get_imageHeight (int imWidth, double aspectRatio){
+    int get_imageHeight (int imWidth, float aspectRatio){
         int image_height = int (imWidth/ aspectRatio);
         return image_height = (image_height < 1) ? 1 : image_height;
     }
@@ -134,6 +138,10 @@ class Camera {
     void initialize(){
         image_height = get_imageHeight(image_width, aspect_ratio);
         pixel_samples_scale = 1.0 / sample_per_pixel;
+
+        look_from = vec3(lookFrom[0], lookFrom[1], lookFrom[2]);
+        look_at = vec3(lookAt[0], lookAt[1], lookAt[2]);
+        
         camera_center = look_from;
 
         // Calculate camera parameters
@@ -143,10 +151,10 @@ class Camera {
 
         // Calculate viewport dimensions
         // focal_length = (look_at - look_from).length();
-        double theta = degrees_to_radians(verticalFOV);
-        double h = std::tan(theta/2);
-        double viewport_height = 2 * h * focus_dist;
-        viewport_width = viewport_height * (double(image_width)/image_height);
+        float theta = degrees_to_radians(verticalFOV);
+        float h = std::tan(theta/2);
+        float viewport_height = 2 * h * focus_dist;
+        viewport_width = viewport_height * (float(image_width)/image_height);
 
         // Calculate the vectors across the horizontal and down the vertical viewport edges.
         // viewport_u = vec3(viewport_width, 0, 0);
@@ -167,7 +175,7 @@ class Camera {
         defocus_disk_v = cam_v * defocus_radius;
     }
 
-    color ray_color(const ray& r, const hittable& world, int max_bounces, double reflectance_coeff, bool& isEmissive, vec3& hit_point){
+    color ray_color(const ray& r, const hittable& world, int max_bounces, float reflectance_coeff, bool& isEmissive, vec3& hit_point){
         if (max_bounces <= 0) return color(0, 0, 0);
 
         hit_record rec;
@@ -224,7 +232,7 @@ class Camera {
         vec3 ray_origin = (dof_angle <= 0) ? camera_center: defocus_disk_sample();
         vec3 ray_direction = pixel_sample - ray_origin;
 
-        double ray_time = random_double();
+        float ray_time = random_double();
 
         return ray(ray_origin, ray_direction, ray_time);
     }
