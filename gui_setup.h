@@ -19,7 +19,7 @@
 class GUI_Handler{
   public:
 
-    GUI_Handler(Camera &cam, hittable_list &world, std::string &output_file) :
+    GUI_Handler(Camera &cam, hittable_list &world, char *output_file) :
       cam(cam),
       world(world),
       filename(output_file)
@@ -150,7 +150,7 @@ class GUI_Handler{
   private:
     hittable_list &world;
     Camera &cam;
-    std::string &filename;
+    char *filename;
 
     void Object_Outliner(const ImGuiViewport *viewport, ImGuiWindowFlags &window_flags) {
       window_flags |= ImGuiWindowFlags_NoCollapse;
@@ -189,17 +189,24 @@ class GUI_Handler{
       ImGui::SetNextWindowSize(ImVec2(0.2f * viewport->WorkSize.x, 0.5f * viewport->WorkSize.y), ImGuiCond_Once);
 
       ImGui::Begin("Camera settings", 0, window_flags);
+
+      ImGui::Text("Image Width");
+      ImGui::InputInt("##imWidth", &cam.image_width);
+
+      ImGui::Text("Aspect Ratio");
+      ImGui::InputFloat("##aspectRatio", &cam.aspect_ratio);
+
       ImGui::Text("EnableAA"); ImGui::SameLine();
       ImGui::Checkbox("##Enable AA", &cam.enableAA);
 
       ImGui::Text("Field of View");
-      ImGui::SliderFloat("##camfov", &cam.verticalFOV, 10.0f, 160.0f);
+      ImGui::InputFloat("##camfov", &cam.verticalFOV, 10.0f, 160.0f);
 
       ImGui::Text("Camera position");
-      ImGui::SliderFloat3("##campos", cam.lookFrom, -10000, 10000);
+      ImGui::SliderFloat3("##campos", cam.look_from.e, -10000, 10000);
 
       ImGui::Text("Camera look at");
-      ImGui::SliderFloat3("##camlookat", cam.lookAt, -10000, 10000);
+      ImGui::SliderFloat3("##camlookat", cam.look_at.e, -10000, 10000);
 
       ImGui::Text("Max bounces");
       ImGui::InputInt("##maxbounces", &cam.max_bounces);
@@ -208,7 +215,9 @@ class GUI_Handler{
       ImGui::InputInt("##samplecount", &cam.sample_per_pixel);
 
       // ImGui::InputFloat()
-      ImGui::Dummy(ImVec2(0.0f, 100.0f));
+      ImGui::Dummy(ImVec2(0.0f, 80.0f));
+      ImGui::Text("Output file path:");
+      ImGui::InputText("##outputfile", filename, 256);
       if (ImGui::Button("RENDER")) { cam.Render(world, filename); }
 
       ImGui::End();

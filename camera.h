@@ -8,11 +8,6 @@
 #include "material.h"
 #include <fstream>
 
-struct camera_params{
-    int image_width;
-    float aspect_ratio, viewport_height, focal_length;
-};
-
 float hit_sphere(const point3& center, float radius, const ray& r) {
     vec3 oc = center - r.origin();
     auto a = r.direction().length_squared();
@@ -31,6 +26,10 @@ float hit_sphere(const point3& center, float radius, const ray& r) {
 
 class Camera {
   public:
+
+    int image_width, image_height;
+    float aspect_ratio, focal_length;
+
     bool enableAA = true;   // Enable Anti-aliasing, default : true
     int sample_per_pixel = 2;
     int max_bounces = 10;
@@ -38,24 +37,15 @@ class Camera {
     float verticalFOV = 90;
     color background;
 
-    point3 look_from = point3(0, 0, 0);
-    point3 look_at   = point3(0, 0, -1);
+    point3 look_from;
+    point3 look_at;
     vec3   world_up  = vec3(0, 1, 0);
-
-    float lookFrom[3] = {0, 0, 0};
-    float lookAt[3] = {0, 0 , -1};
-
 
     float dof_angle = 0;
     float focus_dist = 10;
 
 
-    Camera(int imWidth, float aspectRatio, float viewportHeight, float focalLength) {
-        image_width = imWidth;
-        aspect_ratio = aspectRatio;
-        viewport_height = viewportHeight;
-        // focal_length = focalLength;
-    }
+    Camera() {}
 
     int ImageWidth(){ return image_width; }
     int ImageHeight(){ return image_height; }
@@ -113,10 +103,8 @@ class Camera {
 
     private:
 
-    int image_width, image_height;
     vec3 camera_center;
 
-    float aspect_ratio, focal_length;
     float viewport_width, viewport_height;
 
     vec3 viewport_u, viewport_v;
@@ -139,9 +127,6 @@ class Camera {
         image_height = get_imageHeight(image_width, aspect_ratio);
         pixel_samples_scale = 1.0 / sample_per_pixel;
 
-        look_from = vec3(lookFrom[0], lookFrom[1], lookFrom[2]);
-        look_at = vec3(lookAt[0], lookAt[1], lookAt[2]);
-        
         camera_center = look_from;
 
         // Calculate camera parameters
@@ -206,12 +191,13 @@ class Camera {
 
         if(nextEmissive){
             color_from_emission = rec.material->pbr_color(r, rec, next_ray_color, next_hit_point);
+            return pbr_color + color_from_emission;
         }
 
         // attenuating the incoming ray from next bounce
         color color_from_scatter = pbr_color * next_ray_color;
 
-        return pbr_color + color_from_emission /* + color_from_scatter */;
+        return pbr_color + color_from_scatter;
     }
 
     void process_ray_samples(int i, int j, color &pixel_color, hittable_list& world){
