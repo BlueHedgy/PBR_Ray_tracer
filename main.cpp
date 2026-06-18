@@ -129,26 +129,26 @@ hittable_list quad_scene() {
 
 hittable_list sphere_pbr() {
   hittable_list world;
-  vec3 light_pos = vec3(50, 50, -50);
-  auto earth_texture = std::make_shared<image_texture>("earthmap.jpg"); // import image texture
+  // vec3 light_pos = vec3(50, 50, -50);
+  // auto earth_texture = std::make_shared<image_texture>("earthmap.jpg"); // import image texture
 
-  // auto red    = std::make_shared<pbr_material>(color(1.0, 0.2, 0.2), 0.8, 0.5, light_pos);
-  // auto green  = std::make_shared<pbr_material>(color(0.2, 1.0, 0.2), 0.8, 0.5, light_pos);
-  auto earth_surface = std::make_shared<pbr_material>(
-    earth_texture,
-    color(0.8, 0.8, 0.8),
-    color(0.8, 0.8, 0.8),
-    0.3,
-    light_pos);
+  // // auto red    = std::make_shared<pbr_material>(color(1.0, 0.2, 0.2), 0.8, 0.5, light_pos);
+  // // auto green  = std::make_shared<pbr_material>(color(0.2, 1.0, 0.2), 0.8, 0.5, light_pos);
+  // auto earth_surface = std::make_shared<pbr_material>(
+  //   earth_texture,
+  //   color(0.8, 0.8, 0.8),
+  //   color(0.8, 0.8, 0.8),
+  //   0.3,
+  //   light_pos);
 
-  world.add(std::make_shared<sphere>(point3(1, 0, 0), 1, earth_surface));
-  // world.add(std::make_shared<sphere>(point3(3, 1, 0), 0.25, green));
+  // world.add(std::make_shared<sphere>(point3(1, 0, 0), 1, earth_surface));
+  // // world.add(std::make_shared<sphere>(point3(3, 1, 0), 0.25, green));
 
-  // auto left_red     = std::make_shared<lambertian>(color(1.0, 0.2, 0.2));
-  // world.add(std::make_shared<sphere>(point3(-1,0,0), 1, left_red));
+  // // auto left_red     = std::make_shared<lambertian>(color(1.0, 0.2, 0.2));
+  // // world.add(std::make_shared<sphere>(point3(-1,0,0), 1, left_red));
 
-  auto difflight = std::make_shared<diffuse_light>(color(100, 100, 100  ));
-  world.add(std::make_shared<quad>(point3(-1,1,0), vec3(-1,-1,0), vec3(-1,-1,-1), difflight));
+  // auto difflight = std::make_shared<diffuse_light>(color(100, 100, 100  ));
+  // world.add(std::make_shared<quad>(point3(-1,1,0), vec3(-1,-1,0), vec3(-1,-1,-1), difflight));
 
 
 
@@ -158,29 +158,38 @@ hittable_list sphere_pbr() {
 hittable_list metal_sphere_pbr() {
   hittable_list world;
   vec3 light_pos = vec3(2000, 2000, 2000);
-  auto metal_color = std::make_shared<image_texture>("rustediron2_basecolor.png"); // import image texture
-  auto metal_roughness = std::make_shared<image_texture>("rustediron2_roughness.png"); // import image texture
-  auto metal_metalness = std::make_shared<image_texture>("rustediron2_metallic.png"); // import image texture
+  // auto metal_color = std::make_shared<image_texture>("rustediron2_basecolor.png"); // import image texture
+  // auto metal_normal = std::make_shared<image_texture>("rustediron2_normal.png"); // import image texture
+  // auto metal_roughness = std::make_shared<image_texture>("rustediron2_roughness.png"); // import image texture
+  // auto metal_metalness = std::make_shared<image_texture>("rustediron2_metallic.png"); // import image texture
+
+
+  auto metal_color = std::make_shared<image_texture>("MetalGalvanizedSteelWorn001_COL_1K_METALNESS.jpg"); // import image texture
+  auto metal_normal = std::make_shared<image_texture>("MetalGalvanizedSteelWorn001_NRM_1K_METALNESS.jpg"); // import image texture
+  auto metal_roughness = std::make_shared<image_texture>("MetalGalvanizedSteelWorn001_ROUGHNESS_1K_METALNESS.jpg"); // import image texture
+  auto metal_metalness = std::make_shared<image_texture>("MetalGalvanizedSteelWorn001_METALNESS_1K_METALNESS.jpg"); // import image texture
 
   auto red    = std::make_shared<pbr_material>(
     color(1.0, 0.2, 0.2),
-    color(.8, .8, .8),
+    std::monostate {},
+    color(.6, .6, .6),
     color(.4, .4, .4),
     0.2,
     light_pos
   );
 
-  auto green    = std::make_shared<pbr_material>(
-    color(0.2, 1.0, 0.2),
-    color(.8, .8, .8),
-    color(.4, .4, .4),
-    0.2,
-    light_pos
-  );
+  // auto green    = std::make_shared<pbr_material>(
+  //   color(0.2, 1.0, 0.2),
+  //   color(.8, .8, .8),
+  //   color(.4, .4, .4),
+  //   0.2,
+  //   light_pos
+  // );
 
   auto gray    = std::make_shared<pbr_material>(
     color(0.8, 0.8, 0.8),
-    color(.8, .8, .8),
+    std::monostate {},
+    color(.1, .1, .1),
     color(.4, .4, .4),
     0.2,
     light_pos
@@ -189,6 +198,8 @@ hittable_list metal_sphere_pbr() {
 
   auto metal_sphere = std::make_shared<pbr_material>(
     metal_color,
+    // metal_normal,
+    std::monostate {},
     metal_metalness,
     metal_roughness,
     0.3,
@@ -196,7 +207,7 @@ hittable_list metal_sphere_pbr() {
 
   world.add(std::make_shared<sphere>(point3(-1, 1, 0), 1, red));
   world.add(std::make_shared<sphere>(point3(1, 0, 0), 1, metal_sphere));
-  world.add(std::make_shared<sphere>(point3(0, -101, 0), 100, gray));
+  world.add(std::make_shared<sphere>(point3(0, -1001, 0), 1000, gray));
 
 
   auto difflight = std::make_shared<diffuse_light>(color(0, 0, 100));
@@ -247,7 +258,7 @@ hittable_list simple_light() {
 int main(int argc, char* argv[]) {
 
   int render_case;
-  std::string filename;
+  char *filename;
 
   if (argc != 3) {
     std::cout << "Command: render_case filename !!" << std::endl;
@@ -277,13 +288,11 @@ int main(int argc, char* argv[]) {
     case 9: world = metal_sphere_pbr(); break;
   }
 
-  int image_width = 1000;
-  double aspect_ratio = 16.0 / 9.0;
-  double viewport_height = 2.0;
-  double focal_length = 1.0;
-
     // Render
-  Camera cam = Camera(image_width, aspect_ratio, viewport_height, focal_length);
+  Camera cam = Camera();
+
+  cam.image_width = 1000;
+  cam.aspect_ratio = 16.0 / 9.0;
   cam.enableAA          = true;
   cam.reflectance_coeff = 0.5;
   cam.verticalFOV       = 60;
@@ -293,15 +302,15 @@ int main(int argc, char* argv[]) {
   cam.world_up          = vec3(0, 1, 0);
 
   cam.max_bounces       = 20;
-  cam.sample_per_pixel  = 200;
+  cam.sample_per_pixel  = 100;
 
   cam.dof_angle         = 0.0;
   cam.focus_dist        = 3.4;
   cam.background        = color(0, 0, 0);
 
-  // cam.Render(world, filename);
+  cam.Render(world, filename);
 
-  GUI_Handler GUI(cam, world, filename);
-  GUI.SETUP();
+  // GUI_Handler GUI(cam, world, filename);
+  // GUI.SETUP();
 
 }

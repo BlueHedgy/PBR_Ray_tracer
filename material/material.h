@@ -53,7 +53,10 @@ class material {
       return x * (vec3(1, 1, 1) - a) + y * a;
     }
 
-    vec3 schlick_approx_dielectric(const color& albedo, const float& metalness, float &eta1, float &eta2, const vec3 &view_direction, const vec3 &half_vector) const {
+
+    protected:
+
+    vec3 schlick_approx_dielectric(const color& albedo, const float& metalness, float eta1, float eta2, const vec3 &view_direction, const vec3 &half_vector) const {
       // float fzero = fresnel_0_dielectric(eta1, eta2);
       float fzero = 0.4;
       vec3 f0 = vec3(fzero, fzero, fzero);
@@ -61,8 +64,6 @@ class material {
       f0 = mix(f0, albedo, metal);
       return f0 + (vec3(1,1,1) - f0) * pow((1.0 - dot(view_direction, half_vector)), 5);
     }
-
-  protected:
 
     float GGX_distribution(const float &roughness, const vec3& normal, const vec3& half_vector) const {
       float alpha = roughness*roughness;
@@ -94,16 +95,30 @@ class material {
       return std::min(1.0f, std::min(G1, G2));
     }
 
-    auto Cook_Torrance_Microfacet_BRDF(const color& albedo, const float& metalness, const float& roughness, float refraction_index, const vec3& normal, const vec3& view_direction, vec3& light_direction) const {
-      float air_index = 1;
-      vec3 half_vector = unit_vector(light_direction + view_direction);
-      // float D = Blinn_distribution(roughness, normal, half_vector);
-      auto D = GGX_distribution(roughness, normal, half_vector);
-      float G = Cook_Torrance_Geo_term(normal, view_direction, light_direction, half_vector);
-      vec3 F = schlick_approx_dielectric(albedo, metalness, refraction_index, air_index, normal, half_vector);
+    float Cook_Torrance_GGX_Geo_term(const vec3& normal, const vec3& view_direction, const vec3& light_direction, const vec3& half_vector, const float &roughness) const {
 
+      float alpha = roughness*roughness;
 
-      return D*G*F / (4 * dot(normal, light_direction) * dot(normal, view_direction));
+      float dot_v_h_n = dot(view_direction, half_vector) / dot(view_direction, normal);
+      float dot_l_h_n = dot(light_direction, half_vector) / dot(light_direction, normal);
+
+      float G1 = 0, G2 = 0;
+
+      if (dot_v_h_n > 0){
+        float tan_sqrd_v_n = 1 / pow(dot(view_direction, normal), 2.0) - 1;
+        G1 = 2 / (1 + std::sqrt(1 + alpha*alpha * tan_sqrd_v_n));
+      }
+
+      if (dot_l_h_n > 0){
+        float tan_sqrd_l_n = 1 / pow(dot(light_direction, normal), 2.0) - 1;
+        G2 =  2 / (1 + std::sqrt(1 + alpha*alpha * tan_sqrd_l_n));
+      }
+
+      return G1*G2;
+    }
+
+    color Cook_Torrance_Microfacet_BRDF(const float &D, const float &G, const vec3 &F, const vec3& normal, const vec3& light_direction, const vec3& view_direction) const {
+      return D*G*F / (4 * dot(normal, light_direction) * dot(normal, view_direction) + 0.0001);
     }
 };
 
@@ -112,16 +127,18 @@ class pbr_material : public material {
     float diffuse_coeff;
     point3 light_pos;
 
-    typedef std::variant<color, std::shared_ptr<texture>> texture_map;
+    typedef std::variant<color, std::shared_ptr<texture>, std::monostate> texture_map;
 
     pbr_material (
       const texture_map& albedo,
+      const texture_map& normal,
       const texture_map& metalness,
       const texture_map& roughness,
       const float& diffuse_coeff,
       const point3& light_pos)
       :
       albedo(process_input_texture(albedo)),
+      normal(process_input_texture(normal)),
       metalness(process_input_texture(metalness)),
       roughness(process_input_texture(roughness)),
       diffuse_coeff(diffuse_coeff),
@@ -129,43 +146,75 @@ class pbr_material : public material {
     {}
 
     color pbr_color(const ray& ray_in, const hit_record& rec, const color& light_color, const point3& light_pos) const override {
-      color  albedo_value    = albedo->value(rec.u, rec.v, rec.point_incident);
+      color albedo_value    = albedo->value(rec.u, rec.v, rec.point_incident);
       float roughness_value = roughness->value(rec.u, rec.v, rec.point_incident)[0];
       float metal_value     = metalness->value(rec.u, rec.v, rec.point_incident)[0];
-      vec3   light_dir       = unit_vector(light_pos - rec.point_incident);
-      auto   specular        = Cook_Torrance_Microfacet_BRDF(albedo_value, metal_value, roughness_value, 0.58, rec.normal, -ray_in.direction(), light_dir);
+      color normal_value    = normal->value(rec.u, rec.v, rec.point_incident);
+      vec3  light_direction = unit_vector(light_pos - rec.point_incident);
 
-      color pbr =  (diffuse_coeff * albedo_value / Pi + specular * (1.00-diffuse_coeff)) *
-                    light_color * dot(rec.normal, light_dir);
+      process_normal_value(rec, normal_value);
+
+      vec3 half_vector = unit_vector(light_direction + -ray_in.direction());
+      float D = GGX_distribution(roughness_value, normal_value, half_vector);
+      float G = Cook_Torrance_GGX_Geo_term(normal_value, -ray_in.direction(), light_direction, half_vector, roughness_value);
+      vec3  F = schlick_approx_dielectric(albedo_value, metal_value, 0.58, 1.0, normal_value, half_vector);
+
+      color specular = Cook_Torrance_Microfacet_BRDF(D, G, F, normal_value, light_direction, -ray_in.direction());
+
+      color pbr =  ((color(1, 1, 1) - F) * (1.0 - metal_value) * albedo_value / Pi + specular) *
+                    light_color * dot(rec.normal, light_direction);
 
       return pbr;
     }
 
     bool scatter (const ray& ray_in, const hit_record& rec, color& attenuation, ray& ray_scattered) const{
-      vec3 scatter_direction = rec.normal + random_unit_vector();
+      // if (dot(-ray_in.direction(), rec.normal) < 0){
+      //   attenuation = color(0, 0, 0);
+      //   return false;
+      // }
+
+      color  normal_value    = normal->value(rec.u, rec.v, rec.point_incident);
+      process_normal_value(rec, normal_value);
+
+      vec3 scatter_direction = normal_value + random_unit_vector();
       if (scatter_direction.near_zero()){
-        scatter_direction = rec.normal;   // if scatter direction is near opposite, make it the normal
+        scatter_direction = normal_value;   // if scatter direction is near opposite, make it the normal
       }
       ray_scattered = ray(rec.point_incident, scatter_direction, ray_in.time());
-      attenuation = pbr_color(ray_in, rec, color(1, 1, 1), light_pos);
+      attenuation = pbr_color(ray_in, rec, color(2, 2, 2), light_pos);
       return true;
     }
 
   private:
     std::shared_ptr<texture> albedo;
+    std::shared_ptr<texture> normal;
     std::shared_ptr<texture> metalness;
     std::shared_ptr<texture> roughness;
 
 
     std::shared_ptr<texture> process_input_texture (const texture_map& map_in) const {
-        if (std::holds_alternative<color>(map_in)){
-          return std::make_shared<solid_color>(std::get<color>(map_in));
-        }
-        else if (std::holds_alternative<std::shared_ptr<texture>>(map_in)) {
-          return std::get<std::shared_ptr<texture>>(map_in);
-        }
+      if (std::holds_alternative<color>(map_in)){
+        return std::make_shared<solid_color>(std::get<color>(map_in));
+      }
+      else if (std::holds_alternative<std::shared_ptr<texture>>(map_in)) {
+        return std::get<std::shared_ptr<texture>>(map_in);
+      }
+      return std::make_shared<solid_color>(color(INT_MIN, INT_MIN, INT_MIN));
     }
 
+    void process_normal_value(const hit_record &rec, vec3 &normal_value) const {
+      if ((normal_value == color(INT_MIN, INT_MIN, INT_MIN))) normal_value = rec.normal;
+      else {
+        vec3 tangent_space_normal = unit_vector(normal_value * vec3(2.0, 2.0, 2.0) - vec3(1.0, 1.0, 1.0));
+        normal_value =
+          rec.tangent   * tangent_space_normal.x() +
+          rec.bitangent * -tangent_space_normal.y() +
+          rec.normal    * tangent_space_normal.z()
+        ;
+
+        normal_value = unit_vector(normal_value);
+      }
+    }
 };
 
 

@@ -63,10 +63,16 @@ class image_texture : public texture {
 
       // Clamp input texture coordinates to [0,1] x [1,0]
       u = interval(0, 1).clamp(u);
-      v = 1 - interval(0, 1).clamp(v); // Flip V to image coordinates
+      // v = 1 - interval(0, 1).clamp(v); // Flip V to image coordinates
+      v = interval(0, 1).clamp(v);
 
       int i = int(u * image.width());
       int j = int(v * image.height());
+
+      // Secure against boundary errors (u=1.0 or v=1.0)
+      if (i >= image.width())  i = image.width() - 1;
+      if (j >= image.height()) j = image.height() - 1;
+
       auto pixel = image.pixel_data(i, j);
 
       double color_scale  = 1.0 / 255.0;
