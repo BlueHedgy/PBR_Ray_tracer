@@ -11,8 +11,8 @@ class material {
   public:
     virtual ~material() = default;
     color diffuse;
-    double metallic;
-    double roughness;
+    float metallic;
+    float roughness;
     float refraction_index = 1;
 
     virtual bool scatter(const ray& ray_in, const hit_record& rec, color& attenuation, ray& scattered) const {
@@ -30,21 +30,21 @@ class material {
 
   private:
 
-    double fresnel_reflected (double &eta1, double &eta2, double &theta1, double &theta2) const {
-      double Fpara = (eta2*cos(theta1) - eta1*cos(theta2)) / (eta2*cos(theta1) + eta1*cos(theta2));
-      double Fperp = (eta2*cos(theta2) - eta1*cos(theta1)) / (eta2*cos(theta2) + eta1*cos(theta1));
+    float fresnel_reflected (float &eta1, float &eta2, float &theta1, float &theta2) const {
+      float Fpara = (eta2*cos(theta1) - eta1*cos(theta2)) / (eta2*cos(theta1) + eta1*cos(theta2));
+      float Fperp = (eta2*cos(theta2) - eta1*cos(theta1)) / (eta2*cos(theta2) + eta1*cos(theta1));
 
       return 0.5 * (powf(Fpara, 2) + powf(Fperp, 2));
     }
 
-    double fresnel_0_dielectric(double &eta1, double &eta2) const {
+    float fresnel_0_dielectric(float &eta1, float &eta2) const {
       return (pow((eta2 - eta1), 2) / pow((eta2 + eta1), 2));
     }
 
     /// @brief Calculate fresnel term for eta1 = 1
-    double fresnel_term(double &eta2, vec3 &view_direction, vec3 &half_vector) const {
-      double c = dot(view_direction, half_vector);
-      double g = sqrt(eta2*eta2 + c*c -1);
+    float fresnel_term(float &eta2, vec3 &view_direction, vec3 &half_vector) const {
+      float c = dot(view_direction, half_vector);
+      float g = sqrt(eta2*eta2 + c*c -1);
 
       return 0.5 * pow((g-c)/(g+c), 2) * (1 + pow( (c*(g+c) - 1) / (c*(g-c) +1), 2));
     }
@@ -53,9 +53,9 @@ class material {
       return x * (vec3(1, 1, 1) - a) + y * a;
     }
 
-    vec3 schlick_approx_dielectric(const color& albedo, const double& metalness, double &eta1, double &eta2, const vec3 &view_direction, const vec3 &half_vector) const {
-      // double fzero = fresnel_0_dielectric(eta1, eta2);
-      double fzero = 0.4;
+    vec3 schlick_approx_dielectric(const color& albedo, const float& metalness, float &eta1, float &eta2, const vec3 &view_direction, const vec3 &half_vector) const {
+      // float fzero = fresnel_0_dielectric(eta1, eta2);
+      float fzero = 0.4;
       vec3 f0 = vec3(fzero, fzero, fzero);
       vec3 metal = vec3(metalness, metalness, metalness);
       f0 = mix(f0, albedo, metal);
@@ -64,42 +64,42 @@ class material {
 
   protected:
 
-    double GGX_distribution(const double &roughness, const vec3& normal, const vec3& half_vector) const {
-      double alpha = roughness*roughness;
-      double dot_n_h = dot(normal, half_vector);
-      double x = dot_n_h > 0 ? 1: 0;
+    float GGX_distribution(const float &roughness, const vec3& normal, const vec3& half_vector) const {
+      float alpha = roughness*roughness;
+      float dot_n_h = dot(normal, half_vector);
+      float x = dot_n_h > 0 ? 1: 0;
       return x * (alpha*alpha) / (Pi * pow( pow(dot_n_h, 2) * (alpha*alpha - 1) + 1, 2));
     }
 
-    double Blinn_distribution(const double &roughness, const vec3& normal, const vec3& half_vector) const {
-      double alpha = roughness*roughness;
-      double ns = 2/(alpha*alpha) - 2;
-      double dot_h_n = dot(half_vector, normal);
+    float Blinn_distribution(const float &roughness, const vec3& normal, const vec3& half_vector) const {
+      float alpha = roughness*roughness;
+      float ns = 2/(alpha*alpha) - 2;
+      float dot_h_n = dot(half_vector, normal);
       return 1 / (Pi*alpha*alpha) * pow(dot_h_n, ns);
     }
 
-    double Beckmann_distribution(double &alpha, vec3 &normal, vec3 &half_vector) {
+    float Beckmann_distribution(float &alpha, vec3 &normal, vec3 &half_vector) {
       return 0;
     }
 
-    double GGX_Schlick_approx_Geo(double &roughness, vec3 &normal, vec3 &view_direction) {
-      double k = roughness*roughness / 2.0;
+    float GGX_Schlick_approx_Geo(float &roughness, vec3 &normal, vec3 &view_direction) {
+      float k = roughness*roughness / 2.0;
       return dot(normal, view_direction) / (dot(normal, view_direction) * (1-k) + k);
     }
 
-    double Cook_Torrance_Geo_term(const vec3& normal, const vec3& view_direction, const vec3& light_direction, const vec3& half_vector) const {
+    float Cook_Torrance_Geo_term(const vec3& normal, const vec3& view_direction, const vec3& light_direction, const vec3& half_vector) const {
       auto G1 = 2 * dot(half_vector, normal) * dot(normal, view_direction) / dot(view_direction, half_vector);
       auto G2 = 2 * dot(half_vector, normal) * dot(normal, light_direction) / dot(view_direction, half_vector);
 
-      return std::min(1.00, std::min(G1, G2));
+      return std::min(1.0f, std::min(G1, G2));
     }
 
-    auto Cook_Torrance_Microfacet_BRDF(const color& albedo, const double& metalness, const double& roughness, double refraction_index, const vec3& normal, const vec3& view_direction, vec3& light_direction) const {
-      double air_index = 1;
+    auto Cook_Torrance_Microfacet_BRDF(const color& albedo, const float& metalness, const float& roughness, float refraction_index, const vec3& normal, const vec3& view_direction, vec3& light_direction) const {
+      float air_index = 1;
       vec3 half_vector = unit_vector(light_direction + view_direction);
-      // double D = Blinn_distribution(roughness, normal, half_vector);
+      // float D = Blinn_distribution(roughness, normal, half_vector);
       auto D = GGX_distribution(roughness, normal, half_vector);
-      double G = Cook_Torrance_Geo_term(normal, view_direction, light_direction, half_vector);
+      float G = Cook_Torrance_Geo_term(normal, view_direction, light_direction, half_vector);
       vec3 F = schlick_approx_dielectric(albedo, metalness, refraction_index, air_index, normal, half_vector);
 
 
@@ -109,7 +109,7 @@ class material {
 
 class pbr_material : public material {
   public:
-    double diffuse_coeff;
+    float diffuse_coeff;
     point3 light_pos;
 
     typedef std::variant<color, std::shared_ptr<texture>> texture_map;
@@ -118,7 +118,7 @@ class pbr_material : public material {
       const texture_map& albedo,
       const texture_map& metalness,
       const texture_map& roughness,
-      const double& diffuse_coeff,
+      const float& diffuse_coeff,
       const point3& light_pos)
       :
       albedo(process_input_texture(albedo)),
@@ -130,8 +130,8 @@ class pbr_material : public material {
 
     color pbr_color(const ray& ray_in, const hit_record& rec, const color& light_color, const point3& light_pos) const override {
       color  albedo_value    = albedo->value(rec.u, rec.v, rec.point_incident);
-      double roughness_value = roughness->value(rec.u, rec.v, rec.point_incident)[0];
-      double metal_value     = metalness->value(rec.u, rec.v, rec.point_incident)[0];
+      float roughness_value = roughness->value(rec.u, rec.v, rec.point_incident)[0];
+      float metal_value     = metalness->value(rec.u, rec.v, rec.point_incident)[0];
       vec3   light_dir       = unit_vector(light_pos - rec.point_incident);
       auto   specular        = Cook_Torrance_Microfacet_BRDF(albedo_value, metal_value, roughness_value, 0.58, rec.normal, -ray_in.direction(), light_dir);
 
@@ -193,7 +193,7 @@ class lambertian : public material {
 
 class metal : public material {
   public:
-    metal (const color& albedo, double fuzz) : albedo (albedo), fuzz(fuzz < 1 ? fuzz : 1){}
+    metal (const color& albedo, float fuzz) : albedo (albedo), fuzz(fuzz < 1 ? fuzz : 1){}
 
     bool scatter(const ray& ray_in, const hit_record& rec, color& attenuation, ray& ray_scattered) const override {
       vec3 ray_reflected = reflect(ray_in.direction(), rec.normal);
@@ -205,23 +205,23 @@ class metal : public material {
 
   private:
     color albedo;
-    double fuzz;
+    float fuzz;
 };
 
 
 class dielectric: public material {
   public:
-    dielectric(double refraction_index) : refraction_index(refraction_index) {}
+    dielectric(float refraction_index) : refraction_index(refraction_index) {}
 
     bool scatter(const ray& ray_in, const hit_record& rec, color& attenuation, ray& scattered)
     const override {
         attenuation = color(1.0, 1.0, 1.0);
-        double ri = rec.front_face ? (1.0/refraction_index) : refraction_index;
+        float ri = rec.front_face ? (1.0/refraction_index) : refraction_index;
 
         vec3 unit_direction = unit_vector(ray_in.direction());
 
-        double cos_theta = std::fmin(dot(-unit_direction, rec.normal), 1.0);
-        double sin_theta = std::sqrt(1.0 - cos_theta*cos_theta);
+        float cos_theta = std::fmin(dot(-unit_direction, rec.normal), 1.0);
+        float sin_theta = std::sqrt(1.0 - cos_theta*cos_theta);
 
         bool cannot_refract = ri * sin_theta > 1.0; // if true, MUST reflect
         vec3 reflect_direction;
@@ -237,9 +237,9 @@ class dielectric: public material {
   private:
     // Refractive index in vacuum or air, or the ratio of the material's refractive index over
     // the refractive index of the enclosing media
-    double refraction_index;
+    float refraction_index;
 
-    static double reflectance(double cosine, double refraction_index){
+    static float reflectance(float cosine, float refraction_index){
       // Shlick's approximation for reflectance
       auto r0 = (1 - refraction_index) / (1 + refraction_index);
       r0 = r0 * r0;
