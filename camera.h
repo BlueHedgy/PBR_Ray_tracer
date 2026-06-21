@@ -170,9 +170,9 @@ class Camera {
         }
 
         ray scattered;// or from emission
-        color pbr_color;
+        color direct_lighting;
 
-        if (!rec.material->scatter(r, rec, pbr_color,scattered)){
+        if (!rec.material->scatter(r, rec, direct_lighting,scattered)){
             color emission;
             if (rec.material->emitted(r, rec, emission)){
                 hit_point = rec.point_incident;
@@ -189,15 +189,16 @@ class Camera {
 
         next_ray_color = ray_color(scattered, world, max_bounces-1, reflectance_coeff, nextEmissive, next_hit_point);
 
+        // treat next emissive as another light source found in the scene -> use pbr
         if(nextEmissive){
             color_from_emission = rec.material->pbr_color(r, rec, next_ray_color, next_hit_point);
-            return pbr_color + color_from_emission;
+            return direct_lighting + color_from_emission;
         }
 
         // attenuating the incoming ray from next bounce
-        color color_from_scatter = pbr_color * next_ray_color;
+        // color color_from_scatter = direct_lighting * next_ray_color;
 
-        return pbr_color + color_from_scatter;
+        return direct_lighting * next_ray_color;
     }
 
     void process_ray_samples(int i, int j, color &pixel_color, hittable_list& world){

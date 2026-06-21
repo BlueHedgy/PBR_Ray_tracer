@@ -168,10 +168,6 @@ class pbr_material : public material {
     }
 
     bool scatter (const ray& ray_in, const hit_record& rec, color& attenuation, ray& ray_scattered) const{
-      // if (dot(-ray_in.direction(), rec.normal) < 0){
-      //   attenuation = color(0, 0, 0);
-      //   return false;
-      // }
 
       color  normal_value    = normal->value(rec.u, rec.v, rec.point_incident);
       process_normal_value(rec, normal_value);
@@ -182,7 +178,7 @@ class pbr_material : public material {
       }
       ray_scattered = ray(rec.point_incident, scatter_direction, ray_in.time());
       attenuation = pbr_color(ray_in, rec, color(2, 2, 2), light_pos);
-      return true;
+      return dot(ray_scattered.direction(), rec.normal) > 0;
     }
 
   private:

@@ -158,22 +158,22 @@ hittable_list sphere_pbr() {
 hittable_list metal_sphere_pbr() {
   hittable_list world;
   vec3 light_pos = vec3(2000, 2000, 2000);
-  // auto metal_color = std::make_shared<image_texture>("rustediron2_basecolor.png"); // import image texture
-  // auto metal_normal = std::make_shared<image_texture>("rustediron2_normal.png"); // import image texture
-  // auto metal_roughness = std::make_shared<image_texture>("rustediron2_roughness.png"); // import image texture
-  // auto metal_metalness = std::make_shared<image_texture>("rustediron2_metallic.png"); // import image texture
+  auto metal_color = std::make_shared<image_texture>("rustediron2_basecolor.png"); // import image texture
+  auto metal_normal = std::make_shared<image_texture>("rustediron2_normal.png"); // import image texture
+  auto metal_roughness = std::make_shared<image_texture>("rustediron2_roughness.png"); // import image texture
+  auto metal_metalness = std::make_shared<image_texture>("rustediron2_metallic.png"); // import image texture
 
 
-  auto metal_color = std::make_shared<image_texture>("MetalGalvanizedSteelWorn001_COL_1K_METALNESS.jpg"); // import image texture
-  auto metal_normal = std::make_shared<image_texture>("MetalGalvanizedSteelWorn001_NRM_1K_METALNESS.jpg"); // import image texture
-  auto metal_roughness = std::make_shared<image_texture>("MetalGalvanizedSteelWorn001_ROUGHNESS_1K_METALNESS.jpg"); // import image texture
-  auto metal_metalness = std::make_shared<image_texture>("MetalGalvanizedSteelWorn001_METALNESS_1K_METALNESS.jpg"); // import image texture
+  // auto metal_color = std::make_shared<image_texture>("MetalGalvanizedSteelWorn001_COL_1K_METALNESS.jpg"); // import image texture
+  // auto metal_normal = std::make_shared<image_texture>("MetalGalvanizedSteelWorn001_NRM_1K_METALNESS.jpg"); // import image texture
+  // auto metal_roughness = std::make_shared<image_texture>("MetalGalvanizedSteelWorn001_ROUGHNESS_1K_METALNESS.jpg"); // import image texture
+  // auto metal_metalness = std::make_shared<image_texture>("MetalGalvanizedSteelWorn001_METALNESS_1K_METALNESS.jpg"); // import image texture
 
   auto red    = std::make_shared<pbr_material>(
     color(1.0, 0.2, 0.2),
     std::monostate {},
-    color(.6, .6, .6),
-    color(.4, .4, .4),
+    color(.1, .1, .1),
+    color(.2, .2, .2),
     0.2,
     light_pos
   );
@@ -212,10 +212,10 @@ hittable_list metal_sphere_pbr() {
 
   auto difflight = std::make_shared<diffuse_light>(color(0, 0, 100));
   auto difflight1 = std::make_shared<diffuse_light>(color(10, 10, 0));
+  auto difflight2 = std::make_shared<diffuse_light>(color(10, 10, 10));
   world.add(std::make_shared<quad>(point3(2.5, 2, -2), vec3(0, -3, 0), vec3(0, 0, 3), difflight));
   world.add(std::make_shared<quad>(point3(-2.5, 2, -2), vec3(0, -3, 0), vec3(0, 0, 3), difflight1));
-
-
+  // world.add(std::make_shared<quad>(point3(-2.5, 2.5, 2.5), vec3(0, 0, -5), vec3(5, 0, 0), difflight2));
 
   return world;
 }
@@ -306,7 +306,7 @@ int main(int argc, char* argv[]) {
 
   cam.dof_angle         = 0.0;
   cam.focus_dist        = 3.4;
-  cam.background        = color(0, 0, 0);
+  cam.background        = color(0.2, 0.2, 0.2);
 
   cam.Render(world, filename);
 
