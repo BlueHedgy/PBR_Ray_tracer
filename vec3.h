@@ -10,6 +10,7 @@ class vec3 {
 
     vec3() : e{0,0,0} {}
     vec3(float e0, float e1, float e2) : e{e0, e1, e2} {}
+    vec3(float e0) : e{e0, e0, e0} {}
 
     float x() const { return e[0]; }
     float y() const { return e[1]; }
@@ -35,6 +36,13 @@ class vec3 {
 
     vec3& operator/=(float t) {
         return *this *= 1/t;
+    }
+
+    vec3& operator=(const vec3& v) {
+        e[0] = v.e[0];
+        e[1] = v.e[1];
+        e[2] = v.e[2];
+        return *this;
     }
 
     float length() const {
