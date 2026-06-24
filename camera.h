@@ -5,6 +5,8 @@
 #include "ray.h"
 #include "hittable.h"
 #include "hittable_list.h"
+#include "light.h"
+#include "scene.h"
 #include "material.h"
 #include <fstream>
 
@@ -44,6 +46,7 @@ class Camera {
     float dof_angle = 0;
     float focus_dist = 10;
 
+    lightList lights;
 
     Camera() {}
 
@@ -65,23 +68,23 @@ class Camera {
     vec3 VP_Upper_Left(){ return viewport_upper_left; }
 
 
-    void Render(hittable_list& world, const std::string& filename){
+    void Render(Scene &scene, const std::string& filename){
         initialize();
-
         std::ofstream out(filename);
         if (!out) {
             std::cerr << "Error: Could not open file for writing.\n";
             return;
         }
 
-        out << "P3\n" << image_width << " " << image_height << "\n255\n";
+        scene.process_object_bvh();
 
+        out << "P3\n" << image_width << " " << image_height << "\n255\n";
         for (int j = 0; j < image_height; j++) {
             std::clog << "\rScanlines remaining: " << (image_height - j) << ' ' << std::flush;
             for (int i = 0; i < image_width; i++) {
                 if (enableAA) {
                     color pixel_color = color(0, 0, 0);
-                    process_ray_samples(i, j, pixel_color, world);
+                    process_ray_samples(i, j, pixel_color, scene);
                     write_color(out, pixel_samples_scale * pixel_color);
                 } else {
                     vec3 pixel_center = pixel00_loc + (i * pixel_delta_u) + (j * pixel_delta_v);
@@ -90,7 +93,7 @@ class Camera {
 
                     bool isEmissive;
                     vec3 hit_point;
-                    color pixel_color = ray_color(r, world, max_bounces, reflectance_coeff, isEmissive, hit_point);
+                    color pixel_color = ray_color(r, scene, max_bounces, reflectance_coeff, isEmissive, hit_point);
                     write_color(out, pixel_color);
                 }
             }
@@ -160,19 +163,33 @@ class Camera {
         defocus_disk_v = cam_v * defocus_radius;
     }
 
-    color ray_color(const ray& r, const hittable& world, int max_bounces, float reflectance_coeff, bool& isEmissive, vec3& hit_point){
+    color ray_color(const ray& r, const Scene& scene, int max_bounces, float reflectance_coeff, bool& isEmissive, vec3& hit_point){
         if (max_bounces <= 0) return color(0, 0, 0);
 
         hit_record rec;
 
-        if (!world.hit(r, interval(0.001, Infinity), rec)) {  // 0.001 tolerance for floating point rounding error
+        if (!scene.get_objects().hit(r, interval(0.001, Infinity), rec)) {  // 0.001 tolerance for floating point rounding error
             return background;
         }
 
-        ray scattered;// or from emission
-        color direct_lighting;
+        color direct_lighting = color(0, 0, 0);
 
-        if (!rec.material->scatter(r, rec, direct_lighting,scattered)){
+        for (int i = 0; i < scene.get_lights().size(); i++){
+            const auto& light = *scene.get_lights()[i];
+
+            vec3 light_direction;
+            if (light.type == POINT_LIGHT) {
+                light_direction = unit_vector(light.get_position() - rec.point_incident);
+            }
+            else if (light.type == DIRECTIONAL_LIGHT) {
+                light_direction = unit_vector(-light.get_direction());
+            }
+
+            direct_lighting += rec.material->pbr_color(r, rec, light.get_color(), light_direction);
+        }
+
+        ray scattered;// or from emission
+        if (!rec.material->scatter(r, rec, direct_lighting, scattered)){
             color emission;
             if (rec.material->emitted(r, rec, emission)){
                 hit_point = rec.point_incident;
@@ -187,26 +204,24 @@ class Camera {
         color next_ray_color;
         color color_from_emission;
 
-        next_ray_color = ray_color(scattered, world, max_bounces-1, reflectance_coeff, nextEmissive, next_hit_point);
+        next_ray_color = ray_color(scattered, scene, max_bounces-1, reflectance_coeff, nextEmissive, next_hit_point);
 
         // treat next emissive as another light source found in the scene -> use pbr
         if(nextEmissive){
-            color_from_emission = rec.material->pbr_color(r, rec, next_ray_color, next_hit_point);
+            color_from_emission = rec.material->pbr_color(r, rec, next_ray_color,
+                                                        unit_vector(next_hit_point - rec.point_incident));
             return direct_lighting + color_from_emission;
         }
-
-        // attenuating the incoming ray from next bounce
-        // color color_from_scatter = direct_lighting * next_ray_color;
 
         return direct_lighting * next_ray_color;
     }
 
-    void process_ray_samples(int i, int j, color &pixel_color, hittable_list& world){
+    void process_ray_samples(int i, int j, color &pixel_color, const Scene& scene){
         for (int sample = 0; sample < sample_per_pixel; sample++){
             ray r = get_ray(i, j);
             bool isEmissive;
             vec3 hit_point;
-            pixel_color += ray_color(r, world, max_bounces, reflectance_coeff, isEmissive, hit_point);
+            pixel_color += ray_color(r, scene, max_bounces, reflectance_coeff, isEmissive, hit_point);
         }
     }
     /// @brief Create a ray from camera origin to randomly sampled location around pixel i, j

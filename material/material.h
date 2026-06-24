@@ -134,23 +134,24 @@ class pbr_material : public material {
       const texture_map& normal,
       const texture_map& metalness,
       const texture_map& roughness,
-      const float& diffuse_coeff,
-      const point3& light_pos)
+      const float& diffuse_coeff)
       :
       albedo(process_input_texture(albedo)),
       normal(process_input_texture(normal)),
       metalness(process_input_texture(metalness)),
       roughness(process_input_texture(roughness)),
-      diffuse_coeff(diffuse_coeff),
-      light_pos(light_pos)
+      diffuse_coeff(diffuse_coeff)
     {}
 
-    color pbr_color(const ray& ray_in, const hit_record& rec, const color& light_color, const point3& light_pos) const override {
+    color pbr_color(const ray& ray_in, const hit_record& rec, const color& light_color, const point3& light_direction) const override {
+
+      if (light_direction == point3(INT_MIN, INT_MIN, INT_MIN)) return color(0, 0, 0);
+
       color albedo_value    = albedo->value(rec.u, rec.v, rec.point_incident);
       float roughness_value = roughness->value(rec.u, rec.v, rec.point_incident)[0];
       float metal_value     = metalness->value(rec.u, rec.v, rec.point_incident)[0];
       color normal_value    = normal->value(rec.u, rec.v, rec.point_incident);
-      vec3  light_direction = unit_vector(light_pos - rec.point_incident);
+      // vec3  light_direction = unit_vector(light_pos - rec.point_incident);
 
       process_normal_value(rec, normal_value);
 
@@ -162,7 +163,7 @@ class pbr_material : public material {
       color specular = Cook_Torrance_Microfacet_BRDF(D, G, F, normal_value, light_direction, -ray_in.direction());
 
       color pbr =  ((color(1, 1, 1) - F) * (1.0 - metal_value) * albedo_value / Pi + specular) *
-                    light_color * dot(rec.normal, light_direction);
+                    light_color * std::max(dot(normal_value, light_direction), 0.0f);
 
       return pbr;
     }
@@ -177,7 +178,6 @@ class pbr_material : public material {
         scatter_direction = normal_value;   // if scatter direction is near opposite, make it the normal
       }
       ray_scattered = ray(rec.point_incident, scatter_direction, ray_in.time());
-      attenuation = pbr_color(ray_in, rec, color(2, 2, 2), light_pos);
       return dot(ray_scattered.direction(), rec.normal) > 0;
     }
 
