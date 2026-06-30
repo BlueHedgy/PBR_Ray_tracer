@@ -5,6 +5,7 @@
 #include "texture.h"
 #include "aabb.h"
 #include <variant>
+#include <cmath>
 
 /// @brief Abstract material class
 class material {
@@ -151,9 +152,8 @@ class pbr_material : public material {
       float roughness_value = roughness->value(rec.u, rec.v, rec.point_incident)[0];
       float metal_value     = metalness->value(rec.u, rec.v, rec.point_incident)[0];
       color normal_value    = normal->value(rec.u, rec.v, rec.point_incident);
-      // vec3  light_direction = unit_vector(light_pos - rec.point_incident);
-
-      process_normal_value(rec, normal_value);
+      texture_normal_mapping(rec, normal_value);
+      // normal_value = microfacetNormalGGX(ray_in, rec);
 
       vec3 half_vector = unit_vector(light_direction + -ray_in.direction());
       float D = GGX_distribution(roughness_value, normal_value, half_vector);
@@ -169,24 +169,70 @@ class pbr_material : public material {
     }
 
     bool scatter (const ray& ray_in, const hit_record& rec, color& attenuation, ray& ray_scattered) const{
+      color n = normal->value(rec.u, rec.v, rec.point_incident);  // macrofacet normal
+      texture_normal_mapping(rec, n);
+      float roughness_value = roughness->value(rec.u, rec.v, rec.point_incident)[0];
 
-      color  normal_value    = normal->value(rec.u, rec.v, rec.point_incident);
-      process_normal_value(rec, normal_value);
-
-      vec3 scatter_direction = normal_value + random_unit_vector();
+      vec3 m = microfacetNormalGGX(ray_in, rec);        // microfacet normal
+      vec3 scatter_direction = 2 * std::abs(dot(-ray_in.direction(), m)) * m - -ray_in.direction();
       if (scatter_direction.near_zero()){
-        scatter_direction = normal_value;   // if scatter direction is near opposite, make it the normal
+        scatter_direction = n;   // if scatter direction is near opposite, make it the normal
       }
       ray_scattered = ray(rec.point_incident, scatter_direction, ray_in.time());
-      return dot(ray_scattered.direction(), rec.normal) > 0;
+
+      float cos_theta_m = dot(ray_scattered.direction(), m);
+      float cos_theta_n = dot(ray_scattered.direction(), rec.normal);
+
+      vec3 half_vector = unit_vector(ray_scattered.direction() + -ray_in.direction());
+      float G = Cook_Torrance_GGX_Geo_term(m, -ray_in.direction(), ray_scattered.direction(), half_vector, roughness_value);
+
+      float scatter_weight = std::abs(cos_theta_m) * G /
+                            (std::abs(cos_theta_n) * std::abs(dot(m, n)));
+
+      if(scatter_weight > 1) scatter_weight = 1; // portion of the energy scattered, shouldn't be > 1 (?)
+
+      attenuation = albedo->value(rec.u, rec.v, rec.point_incident) * scatter_weight; //!TODO Need to fix this distribution
+
+      return cos_theta_m > 0;
+    }
+
+    vec3 microfacetNormalGGX(const ray& ray_in, const hit_record& rec) const {
+      float u1 = random_float();
+      float u2 = random_float();
+      float alpha = std::pow(roughness->value(rec.u, rec.v, rec.point_incident)[0], 2);
+      alpha = std::max(alpha, 0.001f);
+
+      float phi = 2 * Pi * u2;
+      float theta = std::atan(alpha * std::sqrt(u1) / std::sqrt(1-u1));
+
+      vec3 local_microfacet_normal = {
+        std::sin(theta) * std::cos(phi),
+        std::sin(theta) * std::sin(phi),
+        std::cos(theta)
+      };
+
+      color normal_value = normal->value(rec.u, rec.v, rec.point_incident);
+      texture_normal_mapping(rec, normal_value);
+
+      // If normal points in world Y-axis direction, use world Z-axis as a fallback.
+      // else use the world Y-axis (0, 1, 0) as the guide vector.
+      vec3 guide = (std::abs(normal_value.y()) < 0.999f) ? vec3(0, 1, 0) : vec3(0, 0, 1);
+
+      // Generate tangent vectors perpendicular to N
+      vec3 T = unit_vector(cross(guide, normal_value));
+      vec3 B = cross(normal_value, T);
+      // -------------------------------------
+
+      // Project the Z-up local vector into your Y-up world space
+      // local_m.x scales Tangent, local_m.y scales Bitangent, local_m.z scales Normal
+      vec3 world_m =  T * local_microfacet_normal.x() +
+                      B * local_microfacet_normal.y() +
+                      normal_value * local_microfacet_normal.z();
+      return unit_vector(world_m);
     }
 
   private:
-    std::shared_ptr<texture> albedo;
-    std::shared_ptr<texture> normal;
-    std::shared_ptr<texture> metalness;
-    std::shared_ptr<texture> roughness;
-
+    std::shared_ptr<texture> albedo, normal, metalness, roughness;
 
     std::shared_ptr<texture> process_input_texture (const texture_map& map_in) const {
       if (std::holds_alternative<color>(map_in)){
@@ -198,13 +244,15 @@ class pbr_material : public material {
       return std::make_shared<solid_color>(color(INT_MIN, INT_MIN, INT_MIN));
     }
 
-    void process_normal_value(const hit_record &rec, vec3 &normal_value) const {
+    void texture_normal_mapping(const hit_record &rec, vec3 &normal_value) const {
       if ((normal_value == color(INT_MIN, INT_MIN, INT_MIN))) normal_value = rec.normal;
       else {
-        vec3 tangent_space_normal = unit_vector(normal_value * vec3(2.0, 2.0, 2.0) - vec3(1.0, 1.0, 1.0));
+
+        // vec3 tangent_space_normal = unit_vector(normal_value * vec3(2.0, 2.0, 2.0) - vec3(1.0, 1.0, 1.0));
+        vec3 tangent_space_normal = normal_value;
         normal_value =
           rec.tangent   * tangent_space_normal.x() +
-          rec.bitangent * -tangent_space_normal.y() +
+          rec.bitangent * tangent_space_normal.y() +
           rec.normal    * tangent_space_normal.z()
         ;
 

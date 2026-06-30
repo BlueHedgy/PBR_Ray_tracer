@@ -172,48 +172,48 @@ class Camera {
             return background;
         }
 
+        color emission;
+        if (rec.material->emitted(r, rec, emission)){
+            hit_point = rec.point_incident;
+            isEmissive = true;
+            return emission;
+        }
+
         color direct_lighting = color(0, 0, 0);
 
         for (int i = 0; i < scene.get_lights().size(); i++){
             const auto& light = *scene.get_lights()[i];
 
             vec3 light_direction;
+            vec3 light_color;
             if (light.type == POINT_LIGHT) {
                 light_direction = unit_vector(light.get_position() - rec.point_incident);
+                float distance_squared = (light.get_position() - rec.point_incident).length_squared();
+                light_color = light.get_color() * 1 / distance_squared;
             }
             else if (light.type == DIRECTIONAL_LIGHT) {
                 light_direction = unit_vector(-light.get_direction());
+                light_color = light.get_color();
             }
 
-            direct_lighting += rec.material->pbr_color(r, rec, light.get_color(), light_direction);
+            direct_lighting += rec.material->pbr_color(r, rec, light_color, light_direction);
         }
 
         ray scattered;// or from emission
-        if (!rec.material->scatter(r, rec, direct_lighting, scattered)){
-            color emission;
-            if (rec.material->emitted(r, rec, emission)){
-                hit_point = rec.point_incident;
-                isEmissive = true;
-                return emission;
-            }
+        color attenuation;
+        if (!rec.material->scatter(r, rec, attenuation, scattered)){
+            return direct_lighting;
         }
 
         // getting info whether we need to check for emission after current bound
         bool nextEmissive = false;
         vec3 next_hit_point;
         color next_ray_color;
-        color color_from_emission;
+        color color_from_emission = color(0, 0, 0);
 
         next_ray_color = ray_color(scattered, scene, max_bounces-1, reflectance_coeff, nextEmissive, next_hit_point);
 
-        // treat next emissive as another light source found in the scene -> use pbr
-        if(nextEmissive){
-            color_from_emission = rec.material->pbr_color(r, rec, next_ray_color,
-                                                        unit_vector(next_hit_point - rec.point_incident));
-            return direct_lighting + color_from_emission;
-        }
-
-        return direct_lighting * next_ray_color;
+        return  direct_lighting + attenuation * next_ray_color;
     }
 
     void process_ray_samples(int i, int j, color &pixel_color, const Scene& scene){

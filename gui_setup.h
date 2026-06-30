@@ -15,13 +15,14 @@
 #include "camera.h"
 #include "hittable.h"
 #include "hittable_list.h"
+#include "scene.h"
 
 class GUI_Handler{
   public:
 
-    GUI_Handler(Camera &cam, hittable_list &world, char *output_file) :
+    GUI_Handler(Camera &cam, Scene &scene, char *output_file) :
       cam(cam),
-      world(world),
+      scene(scene),
       filename(output_file)
     {}
 
@@ -148,7 +149,7 @@ class GUI_Handler{
     }
 
   private:
-    hittable_list &world;
+    Scene &scene;
     Camera &cam;
     char *filename;
 
@@ -218,7 +219,7 @@ class GUI_Handler{
       ImGui::Dummy(ImVec2(0.0f, 80.0f));
       ImGui::Text("Output file path:");
       ImGui::InputText("##outputfile", filename, 256);
-      if (ImGui::Button("RENDER")) { cam.Render(world, filename); }
+      if (ImGui::Button("RENDER")) { cam.Render(scene, filename); }
 
       ImGui::End();
     }
