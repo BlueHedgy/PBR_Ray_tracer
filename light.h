@@ -4,6 +4,7 @@
 #include "aabb.h"
 #include "quad.h"
 #include "material.h"
+#include <algorithm>
 
 enum light_type {
   POINT_LIGHT,

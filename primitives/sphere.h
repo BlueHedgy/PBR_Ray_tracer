@@ -58,7 +58,7 @@ class sphere : public hittable {
       rec.point_incident = r.at(rec.t);
       rec.material = mat;
       vec3 outward_normal = (rec.point_incident - current_center) / radius;
-      
+
       rec.set_face_normal(r, outward_normal);
       rec.tangent = compute_tangent(rec.point_incident, current_center);
       rec.bitangent = compute_bitangent(rec.normal, rec.tangent);
@@ -78,7 +78,7 @@ class sphere : public hittable {
 
     static void get_sphere_uv(const point3& p, double& u, double& v) {
       auto theta = std::acos(p.y());
-      auto phi = std::atan2(p.z(), -p.x()) + Pi;
+      auto phi = std::atan2(p.z(), -p.x());
 
       u = phi / (2*Pi);
       v = theta / Pi;
@@ -89,7 +89,7 @@ class sphere : public hittable {
     }
 
     vec3 compute_bitangent(const vec3 &normal, const vec3 &tangent) const {
-      return unit_vector(cross(normal, tangent));
+      return unit_vector(cross(tangent, normal));
     }
 };
 
