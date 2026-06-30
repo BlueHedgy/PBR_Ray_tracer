@@ -12,8 +12,10 @@ class quad : public hittable {
         D      = dot(normal, Q);
         w      = n / dot(n, n);
         set_bounding_box();
+      center = (Q + u + v) / 2;
     }
 
+    vec3 center;
     virtual void set_bounding_box() {
       auto bbox_diagonal1 = aabb(Q, Q + u + v);
       auto bbox_diagonal2 = aabb(Q + u, Q + v);
