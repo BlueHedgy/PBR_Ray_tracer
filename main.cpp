@@ -251,8 +251,8 @@ int main(int argc, char* argv[]) {
   cam.look_at           = point3(0, 0, 0);
   cam.world_up          = vec3(0, 1, 0);
 
-  cam.max_bounces       = 5;
-  cam.sample_per_pixel  = 200;
+  cam.max_bounces       = 10;
+  cam.sample_per_pixel  = 2000;
 
   cam.dof_angle         = 0.0;
   cam.focus_dist        = 3.4;
