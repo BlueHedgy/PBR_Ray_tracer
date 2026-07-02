@@ -247,9 +247,8 @@ class pbr_material : public material {
     void texture_normal_mapping(const hit_record &rec, vec3 &normal_value) const {
       if ((normal_value == color(INT_MIN, INT_MIN, INT_MIN))) normal_value = rec.normal;
       else {
+        vec3 tangent_space_normal = unit_vector(normal_value * vec3(2.0, 2.0, 2.0) - vec3(1.0, 1.0, 1.0));
 
-        // vec3 tangent_space_normal = unit_vector(normal_value * vec3(2.0, 2.0, 2.0) - vec3(1.0, 1.0, 1.0));
-        vec3 tangent_space_normal = normal_value;
         normal_value =
           rec.tangent   * tangent_space_normal.x() +
           rec.bitangent * tangent_space_normal.y() +

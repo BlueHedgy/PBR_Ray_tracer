@@ -18,7 +18,7 @@ class rtw_image {
   public:
     rtw_image() {}
 
-    rtw_image(const char* image_filename) {
+    rtw_image(const char* image_filename, bool loadRaw) {
       // Loads image data from the specified file. If the RTW_IMAGES environment variable is
       // defined, looks only in that directory for the image file. If the image was not found,
       // searches for the specified image file first from the current directory, then in the
@@ -30,15 +30,15 @@ class rtw_image {
       auto imagedir = getenv("RTW_IMAGES");
 
       // Hunt for the image file in some likely locations.
-      if (imagedir && load(std::string(imagedir) + "/" + image_filename)) return;
-      if (load(filename)) return;
-      if (load("images/" + filename)) return;
-      if (load("../images/" + filename)) return;
-      if (load("../../images/" + filename)) return;
-      if (load("../../../images/" + filename)) return;
-      if (load("../../../../images/" + filename)) return;
-      if (load("../../../../../images/" + filename)) return;
-      if (load("../../../../../../images/" + filename)) return;
+      if (imagedir && load(std::string(imagedir) + "/" + image_filename, loadRaw)) return;
+      if (load(filename, loadRaw)) return;
+      if (load("images/" + filename, loadRaw)) return;
+      if (load("../images/" + filename, loadRaw)) return;
+      if (load("../../images/" + filename, loadRaw)) return;
+      if (load("../../../images/" + filename, loadRaw)) return;
+      if (load("../../../../images/" + filename, loadRaw)) return;
+      if (load("../../../../../images/" + filename, loadRaw)) return;
+      if (load("../../../../../../images/" + filename, loadRaw)) return;
 
       std::cerr << "ERROR: Could not load image file '" << image_filename << "'.\n";
     }
@@ -48,7 +48,7 @@ class rtw_image {
       STBI_FREE(fdata);
     }
 
-    bool load(const std::string& filename) {
+    bool load(const std::string& filename, bool loadRaw) {
       // Loads the linear (gamma=1) image data from the given file name. Returns true if the
       // load succeeded. The resulting data buffer contains the three [0.0, 1.0]
       // floating-point values for the first pixel (red, then green, then blue). Pixels are
@@ -56,6 +56,7 @@ class rtw_image {
       // below, for the full height of the image.
 
       auto n = bytes_per_pixel; // Dummy out parameter: original components per pixel
+      if (loadRaw) stbi_ldr_to_hdr_gamma(1.0f);
       fdata = stbi_loadf(filename.c_str(), &image_width, &image_height, &n, bytes_per_pixel);
       if (fdata == nullptr) return false;
 

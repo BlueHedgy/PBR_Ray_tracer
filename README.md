@@ -84,4 +84,4 @@ An example render case of the project:
 [Main_render]: output/MainRender.png
 
 
-A render of a red sphere and a gold metal sphere, with white emissive light on top, surrounded by multiple walls / planes with reflective and partially metallic properties at 2000 samples per pixel
+A render of a red sphere, a gold metal sphere, and a rusted iron sphere with white emissive light on top, surrounded by multiple walls / planes with reflective and partially metallic properties at 1000 samples per pixel

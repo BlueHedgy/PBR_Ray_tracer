@@ -78,7 +78,7 @@ Scene checkered_spheres() {
 Scene earth() {
   Scene scene;
 
-  auto earth_texture = std::make_shared<image_texture>("earthmap.jpg"); // import image texture
+  auto earth_texture = std::make_shared<image_texture>("earthmap.jpg", true); // import image texture
   auto earth_surface = std::make_shared<lambertian>(earth_texture);     // create earth surface MATERIAL using the earth texture
   auto globe = std::make_shared<sphere>(point3(0,0,0), 2, earth_surface);
 
@@ -158,7 +158,7 @@ Scene simple_light() {
   scene.add_object(std::make_shared<sphere>(point3(0,2,0), 2, std::make_shared<lambertian>(pertext)));
 
   auto difflight = std::make_shared<diffuse_light>(color(1, 1, 1));
-  auto voronoi_light = std::make_shared<diffuse_light>(std::make_shared<image_texture>("worley.png"));
+  auto voronoi_light = std::make_shared<diffuse_light>(std::make_shared<image_texture>("worley.png", true));
   scene.add_object(std::make_shared<quad>(point3(3,1,-2), vec3(2,0,0), vec3(0,2,0), difflight));
   return scene;
 }
@@ -170,30 +170,46 @@ Scene metal_sphere_pbr() {
     std::monostate{}
   );
 
-  auto metal_color = std::make_shared<image_texture>("hammered-gold_albedo.png");
-  auto metal_normal = std::make_shared<image_texture>("hammered-gold_normal-ogl.png");
-  auto metal_roughness = std::make_shared<image_texture>("hammered-gold_roughness.png");
-  auto metal_metalness = std::make_shared<image_texture>("hammered-gold_metallic.png");
+  auto metal_color = std::make_shared<image_texture>("hammered-gold_albedo.png", false);
+  auto metal_normal = std::make_shared<image_texture>("hammered-gold_normal-ogl.png", true);
+  auto metal_roughness = std::make_shared<image_texture>("hammered-gold_roughness.png", true);
+  auto metal_metalness = std::make_shared<image_texture>("hammered-gold_metallic.png", true);
+
+  auto metal_color_1 = std::make_shared<image_texture>("rustediron2_basecolor.png", false);
+  auto metal_normal_1 = std::make_shared<image_texture>("rustediron2_normal.png", true);
+  auto metal_roughness_1 = std::make_shared<image_texture>("rustediron2_roughness.png", true);
+  auto metal_metalness_1 = std::make_shared<image_texture>("rustediron2_metallic.png", true);
+
+  auto no_normal = std::make_shared<image_texture>("no_normal.png", true);
+
+  auto metal_color_2 = std::make_shared<image_texture>("gsteel_color.jpg", false);
+  auto metal_normal_2 = std::make_shared<image_texture>("gsteel_normal.jpg", true);
+  auto metal_roughness_2 = std::make_shared<image_texture>("gsteel_roughness.jpg", true);
+  auto metal_metalness_2 = std::make_shared<image_texture>("gsteel_metal.jpg", true);
 
   auto red     = std::make_shared<pbr_material>(color(1.0, 0.2, 0.2), std::monostate {}, color(0.62), color(.5), 0.2);
   auto yellow  = std::make_shared<pbr_material>(color(1.0, 1.0, 0.2), std::monostate {}, color(.1), color(.5), 0.2);
   auto green   = std::make_shared<pbr_material>(color(0.2, 1.0, 0.2), std::monostate {}, color(.1), color(.5), 0.2);
   auto blue    = std::make_shared<pbr_material>(color(0.2, 0.2, 1.0), std::monostate {}, color(.1), color(.5), 0.2);
   auto gray    = std::make_shared<pbr_material>(color(1), std::monostate {}, color(.1), color(.4), 0.2);
-  auto metal_sphere = std::make_shared<pbr_material>(metal_color, metal_normal, metal_metalness, metal_roughness, 0.3);
 
-  scene.add_object(std::make_shared<sphere>(point3(-1, 0.5, 0), 0.8, red));
+  auto metal_sphere = std::make_shared<pbr_material>(metal_color, metal_normal, metal_metalness, metal_roughness, 0.3);
+  auto metal_sphere_1 = std::make_shared<pbr_material>(metal_color_1, metal_normal_1, metal_metalness_1, metal_roughness_1, 0.3);
+  auto metal_sphere_2 = std::make_shared<pbr_material>(metal_color_2, metal_normal_2, metal_metalness_2, metal_roughness_2, 0.3);
+
+  scene.add_object(std::make_shared<sphere>(point3(-1, 0.5, 0), 0.4, red));
   scene.add_object(std::make_shared<sphere>(point3(1, 0, 0), 0.8, metal_sphere));
+  scene.add_object(std::make_shared<sphere>(point3(-1, -0.5, 0), 0.6, metal_sphere_1));
   scene.add_object(std::make_shared<sphere>(point3(0, -1001, 0), 1000, gray));
 
   auto difflight = std::make_shared<diffuse_light>(color(0, 0, 10));
   auto difflight1 = std::make_shared<diffuse_light>(color(10, 10, 0));
   auto difflight2 = std::make_shared<diffuse_light>(color(10, 10, 10));
 
-  scene.add_object(std::make_shared<quad>(point3(2.5, 2, 2), vec3(0, -3, 0), vec3(0, 0, -5), red));
+  scene.add_object(std::make_shared<quad>(point3(2.5, 2, -2), vec3(0, -3, 0), vec3(0, 0, 5), red));
   scene.add_object(std::make_shared<quad>(point3(-2.5, 2, -2), vec3(0, -3, 0), vec3(0, 0, 5), blue));
   scene.add_object(std::make_shared<quad>(point3(-2.5, 2, -2), vec3(0, -3, 0), vec3(5, 0, 0), green));
-  scene.add_object(std::make_shared<quad>(point3(-2.5, 2, -2), vec3(0, 0, 10), vec3(5, 0, 0), yellow));
+  scene.add_object(std::make_shared<quad>(point3(-2.5, 2, -2), vec3(0, 0, 5), vec3(5, 0, 0), yellow));
 
   scene.add_object(std::make_shared<quad>(point3(-0.5, 2, 2.5), vec3(0, 0, -2), vec3(2, 0, 0), difflight2));
   // scene.add_light(std::make_shared<point_light>(vec3(20, 20, 20), color(2000, 2000, 2000)));
@@ -241,18 +257,18 @@ int main(int argc, char* argv[]) {
     // Render
   Camera cam = Camera();
 
-  cam.image_width = 1000;
+  cam.image_width = 1024;
   cam.aspect_ratio = 16.0 / 9.0;
   cam.enableAA          = true;
   cam.reflectance_coeff = 0.5;
   cam.verticalFOV       = 60;
 
-  cam.look_from         = point3(0, 0, 3);
+  cam.look_from         = point3(0, 0, 2.5);
   cam.look_at           = point3(0, 0, 0);
   cam.world_up          = vec3(0, 1, 0);
 
   cam.max_bounces       = 10;
-  cam.sample_per_pixel  = 2000;
+  cam.sample_per_pixel  = 1000;
 
   cam.dof_angle         = 0.0;
   cam.focus_dist        = 3.4;

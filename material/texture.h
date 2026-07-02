@@ -55,7 +55,7 @@ class checker_texture : public texture {
 
 class image_texture : public texture {
   public:
-    image_texture(const char* filename) : image(filename) {}
+    image_texture(const char* filename, bool loadRaw) : image(filename, loadRaw) {}
 
     color value (double u, double v, const point3& p) const override {
       // no texture data, return solid cyan for debugging
