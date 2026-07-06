@@ -16,6 +16,10 @@
 #include "hittable.h"
 #include "hittable_list.h"
 #include "scene.h"
+#include "multi_thread.h"
+
+#include <thread>
+#include <mutex>
 
 class GUI_Handler{
   public:
@@ -153,6 +157,14 @@ class GUI_Handler{
     Camera &cam;
     char *filename;
 
+// ALL THREADING DECLARATIONS
+// ----------------------------
+    std::atomic_bool render_started = false;
+    std::atomic_bool render_cancelled = false;
+    std::thread renderer_thread;
+// ----------------------------
+
+
     void Object_Outliner(const ImGuiViewport *viewport, ImGuiWindowFlags &window_flags) {
       window_flags |= ImGuiWindowFlags_NoCollapse;
       window_flags |= ImGuiWindowFlags_NoMove;
@@ -169,7 +181,6 @@ class GUI_Handler{
 
       // Object list
       {
-        // imgui_window_flags |= ImGuiWindowFlags_AlwaysVerticalScrollbar;
         ImGui::PushStyleVar(ImGuiStyleVar_ChildRounding, 5.0f);
 
         ImGui::BeginChild("##objectlist", ImVec2(0, INT_MAX), ImGuiChildFlags_Borders, window_flags);
@@ -180,6 +191,9 @@ class GUI_Handler{
     }
 
     void Camera_Settings(ImGuiViewport *viewport, ImGuiWindowFlags &window_flags){
+
+      thread_guard_condition guard_renderer(renderer_thread, render_started);
+
       window_flags |= ImGuiWindowFlags_NoCollapse;
       window_flags |= ImGuiWindowFlags_NoMove;
 
@@ -219,9 +233,53 @@ class GUI_Handler{
       ImGui::Dummy(ImVec2(0.0f, 80.0f));
       ImGui::Text("Output file path:");
       ImGui::InputText("##outputfile", filename, 256);
-      if (ImGui::Button("RENDER")) { cam.Render(scene, filename); }
+
+
+      ImGui::BeginDisabled(render_started);
+      if (ImGui::Button("RENDER")) {
+
+        render_started = true;
+        render_cancelled = false;
+        Camera newRenderCam = cam;
+
+        renderer_thread = std::thread(
+          &GUI_Handler::Start_Render,
+          this,
+          std::ref(render_started),
+          std::ref(render_cancelled)
+        );
+      }
+
+      ImGui::EndDisabled();
+
+      ImGui::SameLine();
+
+      ImGui::BeginDisabled(!render_started);
+      if (ImGui::Button("CANCEL RENDER")) {
+        render_cancelled = true;
+      }
+      ImGui::EndDisabled();
 
       ImGui::End();
+    }
+
+
+    void Start_Render(std::atomic_bool &render_started, std::atomic_bool &render_cancelled) {
+      Camera RenderCam = cam;
+      Scene RenderScene = scene;
+      std::string RenderFilename = filename;
+
+
+      std::mutex output_mutex;
+
+      image output_image;
+
+      RenderCam.Render_MultiThreaded(RenderScene, RenderFilename, render_cancelled, output_image);
+
+      RenderCam.WriteImageToFile(output_image, RenderFilename);
+
+      render_started = false;
+
     }
 
 };

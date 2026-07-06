@@ -12,7 +12,7 @@
 #include "scene.h"
 
 #include <string>
-
+#include <thread>
 
 Scene bouncing_sphere() {
   Scene scene;
@@ -180,8 +180,6 @@ Scene metal_sphere_pbr() {
   auto metal_roughness_1 = std::make_shared<image_texture>("rustediron2_roughness.png", true);
   auto metal_metalness_1 = std::make_shared<image_texture>("rustediron2_metallic.png", true);
 
-  auto no_normal = std::make_shared<image_texture>("no_normal.png", true);
-
   auto metal_color_2 = std::make_shared<image_texture>("gsteel_color.jpg", false);
   auto metal_normal_2 = std::make_shared<image_texture>("gsteel_normal.jpg", true);
   auto metal_roughness_2 = std::make_shared<image_texture>("gsteel_roughness.jpg", true);
@@ -225,24 +223,27 @@ Scene metal_sphere_pbr() {
 int main(int argc, char* argv[]) {
 
   int render_case;
-  char *filename;
+  char filename[256] = "output/output.ppm";
 
-  if (argc != 3) {
-    std::cout << "Command: render_case filename !!" << std::endl;
-    return -1;
-  }
+  // if (argc > 3) {
+  //   std::cout << "Command: <render_case> filename> !!" << std::endl;
+  //   return -1;
+  // }
 
-  try  {
-    render_case = std::stoi(argv[1]);
-  } catch (const std::exception& e) {
-    std::cerr << "render_case NOT an integer.\n";
-    return 1;
-  }
+  // try  {
+  //   render_case = std::stoi(argv[1]);
+  // } catch (const std::exception& e) {
+  //   std::cerr << "render_case NOT an integer.\n";
+  //   return 1;
+  // }
 
-  filename = argv[2];
+  // if (argc == 3){
+  //   std::strncpy(filename, argv[2], sizeof(filename) - 1);
+  //   filename[sizeof(filename) - 1] = '\0';
+  // }
 
   Scene scene;
-  // render_case = 8;
+  render_case = 8;
   switch (render_case) {
     case 1: scene = bouncing_sphere(); break;
     case 2: scene = checkered_spheres(); break;
@@ -268,15 +269,24 @@ int main(int argc, char* argv[]) {
   cam.world_up          = vec3(0, 1, 0);
 
   cam.max_bounces       = 10;
-  cam.sample_per_pixel  = 1000;
+  cam.sample_per_pixel  = 500;
 
   cam.dof_angle         = 0.0;
   cam.focus_dist        = 3.4;
   cam.background        = color(0);
 
-  cam.Render(scene, filename);
+  // image output_image;
+  // cam.Render(scene, filename, output_image);
 
-  // GUI_Handler GUI(cam, object_list, filename);
-  // GUI.SETUP();
+  // std::atomic_bool render_started = false;
+  // std::atomic_bool render_cancelled = false;
+  // std::thread renderer_thread;
+
+  // cam.Render_MultiThreaded(scene, filename, render_cancelled, output_image);
+  // cam.WriteImageToFile(output_image, filename);
+
+  // std::thread GUI_thread;
+  GUI_Handler GUI(cam, scene, filename);
+  GUI.SETUP();
 
 }

@@ -9,6 +9,12 @@
 #include "scene.h"
 #include "material.h"
 #include <fstream>
+#include "multi_thread.h"
+
+#include <thread>
+#include <mutex>
+
+typedef std::vector<std::vector<color>> image;
 
 float hit_sphere(const point3& center, float radius, const ray& r) {
     vec3 oc = center - r.origin();
@@ -68,7 +74,7 @@ class Camera {
     vec3 VP_Upper_Left(){ return viewport_upper_left; }
 
 
-    void Render(Scene &scene, const std::string& filename){
+    void Render(Scene &scene, const std::string& filename, image &output_image){
         initialize();
         std::ofstream out(filename);
         if (!out) {
@@ -77,6 +83,7 @@ class Camera {
         }
 
         scene.process_object_bvh();
+        output_image = image(image_width, std::vector<color>(image_height));
 
         out << "P3\n" << image_width << " " << image_height << "\n255\n";
         for (int j = 0; j < image_height; j++) {
@@ -85,7 +92,8 @@ class Camera {
                 if (enableAA) {
                     color pixel_color = color(0, 0, 0);
                     process_ray_samples(i, j, pixel_color, scene);
-                    write_color(out, pixel_samples_scale * pixel_color);
+                    output_image[i][j] = pixel_color;
+                    // write_color(out, pixel_samples_scale * pixel_color);
                 } else {
                     vec3 pixel_center = pixel00_loc + (i * pixel_delta_u) + (j * pixel_delta_v);
                     vec3 ray_direction = pixel_center - camera_center;
@@ -94,7 +102,8 @@ class Camera {
                     bool isEmissive;
                     vec3 hit_point;
                     color pixel_color = ray_color(r, scene, max_bounces, reflectance_coeff, isEmissive, hit_point);
-                    write_color(out, pixel_color);
+                    output_image[i][j] = pixel_color;
+                    // write_color(out, pixel_color);
                 }
             }
         }
@@ -103,6 +112,70 @@ class Camera {
         out.close();  // Explicitly close (optional, but good practice)
     }
 
+
+    void Render_MultiThreaded(Scene &scene, const std::string &filename,
+        const std::atomic_bool &render_cancelled, image &output_image)
+    {
+        initialize();
+        scene.process_object_bvh();
+
+        output_image = image(image_width, std::vector<color>(image_height));
+        thread_pool render_threads;
+
+        for (int j = 0; j < image_height; j++) {
+            std::clog << "\r Processing Scanline no: " << j << ' ' << std::flush;
+            render_threads.enqueue([this, j, &scene, &output_image, &render_cancelled] {
+                Render_Scanline(j, scene, output_image, render_cancelled);
+            });
+        }
+
+    }
+
+    void Render_Scanline(size_t line_index,
+        Scene &scene, image &output_image,
+        const std::atomic_bool &render_cancelled)
+    {
+        for (int i = 0; i < image_width; i++) {
+            if (render_cancelled) { return; }
+            if (enableAA) {
+                color pixel_color = color(0, 0, 0);
+                process_ray_samples(i, line_index, pixel_color, scene);
+                output_image[i][line_index] = pixel_color;
+
+            } else {
+                vec3 pixel_center = pixel00_loc + (i * pixel_delta_u) + (line_index * pixel_delta_v);
+                vec3 ray_direction = pixel_center - camera_center;
+                ray r(camera_center, ray_direction);
+
+                bool isEmissive;
+                vec3 hit_point;
+                color pixel_color = ray_color(r, scene, max_bounces, reflectance_coeff, isEmissive, hit_point);
+                output_image[i][line_index] = pixel_color;
+
+            }
+        }
+    }
+
+    void WriteImageToFile (const image &output_image, const std::string &filename){
+        std::ofstream out(filename);
+        if (!out) {
+            std::cerr << "Error: Could not open file for writing.\n";
+            return;
+        }
+
+        out << "P3\n" << image_width << " " << image_height << "\n255\n";
+        for (int j = 0; j < image_height; j++) {
+            std::clog << "\rScanlines remaining: " << (image_height - j) << ' ' << std::flush;
+            for (int i = 0; i < image_width; i++) {
+
+                color pixel_color = output_image[i][j];
+                write_color(out, pixel_samples_scale * pixel_color);
+            }
+        }
+
+        std::clog << "\rDone.                 \n";
+        out.close();  // Explicitly close (optional, but good practice)
+    }
 
     private:
 
