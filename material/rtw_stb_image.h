@@ -7,8 +7,8 @@
 #pragma warning(push, 0)
 #endif
 
-#define STB_IMAGE_IMPLEMENTATION
-#define STBI_FAILURE_USERMSG
+// #define STB_IMAGE_IMPLEMENTATION
+// #define STBI_FAILURE_USERMSG
 #include <cstdlib>
 #include <iostream>
 
@@ -45,7 +45,8 @@ class rtw_image {
 
     ~rtw_image() {
       delete[] bdata;
-      STBI_FREE(fdata);
+      // STBI_FREE(fdata);
+      stbi_image_free(fdata);
     }
 
     bool load(const std::string& filename, bool loadRaw) {

@@ -9,19 +9,47 @@ project(
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-if (CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
+if (CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
+  add_compile_options(-fcolor-diagnostics -fansi-escape-codes)
+
+  if (MSVC)
+    add_compile_options(
+      /W4 /permissive-
+      /clang:-Wno-unused-parameter
+      /clang:-Wno-sign-compare
+      /clang:-Wno-unused-variable
+    )
+    set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/bin/windows)
+
+  elseif (CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
+    add_compile_options(
+    -Wall
+    -Wno-changes-meaning
+    -Wno-unused-parameter
+    -Wno-unused-variable
+    )
+    set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/bin/linux)
+
+  endif()
+
+elseif (CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
   add_compile_options(-Wall -Wno-changes-meaning)
   set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/bin/linux)
+
 elseif (MSVC)
   add_compile_options(/W4 /permissive-)
   set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/bin/windows)
+
 endif()
+
+
 
 # set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/$<CONFIGURATION>")
 set(CMAKE_LIBRARY_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/$<CONFIGURATION>")
 
 set(SOURCES
 main.cpp
+miscs/stb_init.cpp
 )
 
 set(IMGUI_SOURCE
@@ -47,12 +75,14 @@ target_include_directories(raytrace PRIVATE
   ${CMAKE_SOURCE_DIR}
   ${CMAKE_SOURCE_DIR}/material
   ${CMAKE_SOURCE_DIR}/external
+  ${CMAKE_SOURCE_DIR}/external/stb
   ${CMAKE_SOURCE_DIR}/external/SDL/include
   ${CMAKE_SOURCE_DIR}/external/imgui
   ${CMAKE_SOURCE_DIR}/external/imgui/backends
   ${CMAKE_SOURCE_DIR}/external/imgui/misc/cpp/
   ${CMAKE_SOURCE_DIR}/noises
   ${CMAKE_SOURCE_DIR}/primitives
+  ${CMAKE_SOURCE_DIR}/gui
 )
 
 find_package(OpenGL REQUIRED)
