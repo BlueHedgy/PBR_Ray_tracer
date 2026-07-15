@@ -13,6 +13,7 @@
 
 #include <string>
 #include <thread>
+#include <atomic>
 
 Scene bouncing_sphere() {
   Scene scene;
@@ -223,7 +224,7 @@ Scene metal_sphere_pbr() {
 int main(int argc, char* argv[]) {
 
   int render_case;
-  char filename[256] = "output/output.ppm";
+  char filename[256] = "D:\\PROGRAMMING\\Active_Projects\\RayTraceLearn\\oneweekend\\output\\output.ppm";
 
   // if (argc > 3) {
   //   std::cout << "Command: <render_case> filename> !!" << std::endl;
@@ -258,7 +259,7 @@ int main(int argc, char* argv[]) {
     // Render
   Camera cam = Camera();
 
-  cam.image_width = 1024;
+  cam.image_width = 200;
   cam.aspect_ratio = 16.0 / 9.0;
   cam.enableAA          = true;
   cam.reflectance_coeff = 0.5;
@@ -269,7 +270,7 @@ int main(int argc, char* argv[]) {
   cam.world_up          = vec3(0, 1, 0);
 
   cam.max_bounces       = 10;
-  cam.sample_per_pixel  = 500;
+  cam.sample_per_pixel  = 10;
 
   cam.dof_angle         = 0.0;
   cam.focus_dist        = 3.4;

@@ -1,7 +1,7 @@
 #ifndef CAMERA_H
 #define CAMERA_H
 
-#include "vec3.h"
+#include "color.h"
 #include "ray.h"
 #include "hittable.h"
 #include "hittable_list.h"
@@ -13,8 +13,12 @@
 
 #include <thread>
 #include <mutex>
+#include <algorithm>
+
+#include "gui_image_load.h"
 
 typedef std::vector<std::vector<color>> image;
+
 
 float hit_sphere(const point3& center, float radius, const ray& r) {
     vec3 oc = center - r.origin();
@@ -36,6 +40,7 @@ class Camera {
   public:
 
     int image_width, image_height;
+    int render_width, render_height;
     float aspect_ratio, focal_length;
 
     bool enableAA = true;   // Enable Anti-aliasing, default : true
@@ -55,9 +60,6 @@ class Camera {
     lightList lights;
 
     Camera() {}
-
-    int ImageWidth(){ return image_width; }
-    int ImageHeight(){ return image_height; }
 
     vec3 getCenter(){ return camera_center; }
     void setCenter(vec3 newPosition){ camera_center = newPosition; }
@@ -93,7 +95,6 @@ class Camera {
                     color pixel_color = color(0, 0, 0);
                     process_ray_samples(i, j, pixel_color, scene);
                     output_image[i][j] = pixel_color;
-                    // write_color(out, pixel_samples_scale * pixel_color);
                 } else {
                     vec3 pixel_center = pixel00_loc + (i * pixel_delta_u) + (j * pixel_delta_v);
                     vec3 ray_direction = pixel_center - camera_center;
@@ -103,7 +104,6 @@ class Camera {
                     vec3 hit_point;
                     color pixel_color = ray_color(r, scene, max_bounces, reflectance_coeff, isEmissive, hit_point);
                     output_image[i][j] = pixel_color;
-                    // write_color(out, pixel_color);
                 }
             }
         }
@@ -114,31 +114,29 @@ class Camera {
 
 
     void Render_MultiThreaded(Scene &scene, const std::string &filename,
-        const std::atomic_bool &render_cancelled, image &output_image)
+        const std::atomic_bool &render_cancelled, image &output_image, display_image_data &d_imdata)
     {
-        initialize();
+        // initialize();
         scene.process_object_bvh();
 
-        output_image = image(image_width, std::vector<color>(image_height));
+        output_image = image(render_width, std::vector<color>(render_height));
         thread_pool render_threads;
 
-        for (int j = 0; j < image_height; j++) {
-            std::clog << "\r Processing Scanline no: " << j << ' ' << std::flush;
-            render_threads.enqueue([this, j, &scene, &output_image, &render_cancelled] {
-                Render_Scanline(j, scene, output_image, render_cancelled);
+        for (int j = 0; j < render_height; j++) {
+            render_threads.enqueue([this, j, &scene, &output_image, &render_cancelled, &d_imdata] {
+                Render_Scanline(j, scene, output_image, render_cancelled, d_imdata);
             });
         }
-
     }
 
     void Render_Scanline(size_t line_index,
         Scene &scene, image &output_image,
-        const std::atomic_bool &render_cancelled)
+        const std::atomic_bool &render_cancelled, display_image_data &d_imdata)
     {
-        for (int i = 0; i < image_width; i++) {
+        for (int i = 0; i < render_width; i++) {
             if (render_cancelled) { return; }
+            color pixel_color = color(0, 0, 0);
             if (enableAA) {
-                color pixel_color = color(0, 0, 0);
                 process_ray_samples(i, line_index, pixel_color, scene);
                 output_image[i][line_index] = pixel_color;
 
@@ -149,10 +147,22 @@ class Camera {
 
                 bool isEmissive;
                 vec3 hit_point;
-                color pixel_color = ray_color(r, scene, max_bounces, reflectance_coeff, isEmissive, hit_point);
+                pixel_color = ray_color(r, scene, max_bounces, reflectance_coeff, isEmissive, hit_point);
                 output_image[i][line_index] = pixel_color;
-
             }
+
+            pixel_color /= sample_per_pixel;
+
+            float red = linear_to_gamma2(pixel_color.x());
+            float green = linear_to_gamma2(pixel_color.y());
+            float blue = linear_to_gamma2(pixel_color.z());
+
+            size_t idx = (line_index * render_width + i) * 4;
+
+            d_imdata.output_image_data[idx + 0] = std::clamp(red, 0.0f, 0.999f);
+            d_imdata.output_image_data[idx + 1] = std::clamp(green, 0.0f, 0.999f);
+            d_imdata.output_image_data[idx + 2] = std::clamp(blue, 0.0f, 0.999f);
+            d_imdata.output_image_data[idx + 3] = 1.0f;
         }
     }
 
@@ -163,10 +173,10 @@ class Camera {
             return;
         }
 
-        out << "P3\n" << image_width << " " << image_height << "\n255\n";
-        for (int j = 0; j < image_height; j++) {
-            std::clog << "\rScanlines remaining: " << (image_height - j) << ' ' << std::flush;
-            for (int i = 0; i < image_width; i++) {
+        out << "P3\n" << render_width << " " << render_height << "\n255\n";
+        for (int j = 0; j < render_height; j++) {
+            std::clog << "\rScanlines remaining: " << (render_height - j) << ' ' << std::flush;
+            for (int i = 0; i < render_width; i++) {
 
                 color pixel_color = output_image[i][j];
                 write_color(out, pixel_samples_scale * pixel_color);
@@ -177,29 +187,7 @@ class Camera {
         out.close();  // Explicitly close (optional, but good practice)
     }
 
-    private:
-
-    vec3 camera_center;
-
-    float viewport_width, viewport_height;
-
-    vec3 viewport_u, viewport_v;
-    vec3 pixel_delta_u, pixel_delta_v;
-
-    vec3 viewport_upper_left, pixel00_loc;
-
-    float pixel_samples_scale;         // Color scale factor for a sum of pixel samples
-
-    vec3 cam_u, cam_v, cam_w;
-    vec3 defocus_disk_u, defocus_disk_v;
-
-    /// @brief Get integer image height based on the aspect ratio of the image
-    int get_imageHeight (int imWidth, float aspectRatio){
-        int image_height = int (imWidth/ aspectRatio);
-        return image_height = (image_height < 1) ? 1 : image_height;
-    }
-
-    void initialize(){
+        void initialize(){
         image_height = get_imageHeight(image_width, aspect_ratio);
         pixel_samples_scale = 1.0 / sample_per_pixel;
 
@@ -235,6 +223,29 @@ class Camera {
         defocus_disk_u = cam_u * defocus_radius;
         defocus_disk_v = cam_v * defocus_radius;
     }
+
+    private:
+
+    vec3 camera_center;
+
+    float viewport_width, viewport_height;
+
+    vec3 viewport_u, viewport_v;
+    vec3 pixel_delta_u, pixel_delta_v;
+
+    vec3 viewport_upper_left, pixel00_loc;
+
+    float pixel_samples_scale;         // Color scale factor for a sum of pixel samples
+
+    vec3 cam_u, cam_v, cam_w;
+    vec3 defocus_disk_u, defocus_disk_v;
+
+    /// @brief Get integer image height based on the aspect ratio of the image
+    int get_imageHeight (int imWidth, float aspectRatio){
+        int image_height = int (imWidth/ aspectRatio);
+        return image_height = (image_height < 1) ? 1 : image_height;
+    }
+
 
     color ray_color(const ray& r, const Scene& scene, int max_bounces, float reflectance_coeff, bool& isEmissive, vec3& hit_point){
         if (max_bounces <= 0) return color(0, 0, 0);
@@ -310,7 +321,7 @@ class Camera {
         float ray_time = random_double();
 
         return ray(ray_origin, ray_direction, ray_time);
-    }
+    }\
 
     vec3 sample_square() const {
         // Returns the vector to a random point in the [-.5,-.5]-[+.5,+.5] unit square.

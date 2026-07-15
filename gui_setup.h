@@ -8,6 +8,9 @@
 #include <SDL3/SDL.h>
 #include <SDL3/SDL_opengl.h>
 
+#include <thread>
+#include <mutex>
+
 #ifdef __EMSCRIPTEN__
 #include "../libs/emscripten/emscripten_mainloop_stub.h"
 #endif
@@ -17,9 +20,8 @@
 #include "hittable_list.h"
 #include "scene.h"
 #include "multi_thread.h"
+#include "gui_image_load.h"
 
-#include <thread>
-#include <mutex>
 
 class GUI_Handler{
   public:
@@ -130,7 +132,7 @@ class GUI_Handler{
         // ACTUAL GUI HERE_____________________________________________________________
         { Object_Outliner(viewport, imgui_window_flags); }
         { Camera_Settings(viewport, imgui_window_flags); }
-
+        { Render_Viewer(viewport, imgui_window_flags); }
 
         // Rendering
         ImGui::Render();
@@ -157,10 +159,14 @@ class GUI_Handler{
     Camera &cam;
     char *filename;
 
+// ALL RENDER VIEWER DECLARATIONS
+    display_image_data d_imdata;
+// ------------------------------
+
 // ALL THREADING DECLARATIONS
-// ----------------------------
     std::atomic_bool render_started = false;
     std::atomic_bool render_cancelled = false;
+    std::atomic_bool render_done = false;
     std::thread renderer_thread;
 // ----------------------------
 
@@ -191,8 +197,6 @@ class GUI_Handler{
     }
 
     void Camera_Settings(ImGuiViewport *viewport, ImGuiWindowFlags &window_flags){
-
-      thread_guard_condition guard_renderer(renderer_thread, render_started);
 
       window_flags |= ImGuiWindowFlags_NoCollapse;
       window_flags |= ImGuiWindowFlags_NoMove;
@@ -238,17 +242,27 @@ class GUI_Handler{
       ImGui::BeginDisabled(render_started);
       if (ImGui::Button("RENDER")) {
 
+        cam.initialize();
+        cam.render_width = cam.image_width;
+        cam.render_height = cam.image_height;
+
+        std::cout << cam.render_width << " " << cam.render_height << std::endl;
+        if (!render_started) SetupRenderViewer();
+
         render_started = true;
         render_cancelled = false;
-        Camera newRenderCam = cam;
 
         renderer_thread = std::thread(
           &GUI_Handler::Start_Render,
           this,
           std::ref(render_started),
-          std::ref(render_cancelled)
+          std::ref(render_cancelled),
+          std::ref(render_done)
         );
       }
+
+      // Check if the renderer thread is done and thus joinable, then join
+      thread_guard_condition guard_renderer(renderer_thread, render_started);
 
       ImGui::EndDisabled();
 
@@ -263,23 +277,46 @@ class GUI_Handler{
       ImGui::End();
     }
 
+    void Start_Render(std::atomic_bool &render_started, std::atomic_bool &render_cancelled, std::atomic_bool &render_done) {
+      render_done = false;
 
-    void Start_Render(std::atomic_bool &render_started, std::atomic_bool &render_cancelled) {
-      Camera RenderCam = cam;
       Scene RenderScene = scene;
       std::string RenderFilename = filename;
 
-
-      std::mutex output_mutex;
-
       image output_image;
 
-      RenderCam.Render_MultiThreaded(RenderScene, RenderFilename, render_cancelled, output_image);
-
-      RenderCam.WriteImageToFile(output_image, RenderFilename);
+      cam.Render_MultiThreaded(RenderScene, RenderFilename, render_cancelled, output_image, d_imdata);
 
       render_started = false;
+      render_done = true;
 
+    }
+
+
+    void Render_Viewer(ImGuiViewport *viewport, ImGuiWindowFlags &window_flags) {
+      window_flags |= ImGuiWindowFlags_NoCollapse;
+      window_flags |= ImGuiWindowFlags_NoMove;
+
+      ImVec2 pos = ImVec2(viewport->WorkPos.x, viewport->WorkPos.y);
+      ImGui::SetNextWindowPos(pos, ImGuiCond_Always, ImVec2(0.0f, 0.0f));
+      ImGui::SetNextWindowSize(ImVec2(0.8f * viewport->WorkSize.x, viewport->WorkSize.y), ImGuiCond_Once);
+
+      ImGui::Begin("OpenGL Texture Text");
+
+      bool is_rendered = LoadRenderedTexture(
+        d_imdata,
+        cam.render_width,
+        cam.render_height
+      );
+
+      ImGui::Text("size = %d x %d", cam.render_width, cam.render_height);
+      ImGui::Image((ImTextureID)(intptr_t)d_imdata.out_texture, ImVec2(cam.render_width, cam.render_height));
+      ImGui::End();
+
+    }
+
+    void SetupRenderViewer() {
+      d_imdata.output_image_data = std::vector<float>(cam.render_width * cam.render_height * 4);
     }
 
 };
