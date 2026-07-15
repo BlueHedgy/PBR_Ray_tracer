@@ -161,6 +161,7 @@ class GUI_Handler{
 
 // ALL RENDER VIEWER DECLARATIONS
     display_image_data d_imdata;
+    Camera RenderCam;
 // ------------------------------
 
 // ALL THREADING DECLARATIONS
@@ -242,11 +243,13 @@ class GUI_Handler{
       ImGui::BeginDisabled(render_started);
       if (ImGui::Button("RENDER")) {
 
-        cam.initialize();
-        cam.render_width = cam.image_width;
-        cam.render_height = cam.image_height;
+        // Make a copy of the main camera to avoid GUI change affecting the launched render
+        RenderCam = cam;
+        RenderCam.initialize();
+        RenderCam.render_width = RenderCam.image_width;
+        RenderCam.render_height = RenderCam.image_height;
 
-        std::cout << cam.render_width << " " << cam.render_height << std::endl;
+        std::cout << RenderCam.render_width << " " << RenderCam.render_height << std::endl;
         if (!render_started) SetupRenderViewer();
 
         render_started = true;
@@ -285,7 +288,7 @@ class GUI_Handler{
 
       image output_image;
 
-      cam.Render_MultiThreaded(RenderScene, RenderFilename, render_cancelled, output_image, d_imdata);
+      RenderCam.Render_MultiThreaded(RenderScene, RenderFilename, render_cancelled, output_image, d_imdata);
 
       render_started = false;
       render_done = true;
@@ -305,18 +308,18 @@ class GUI_Handler{
 
       bool is_rendered = LoadRenderedTexture(
         d_imdata,
-        cam.render_width,
-        cam.render_height
+        RenderCam.render_width,
+        RenderCam.render_height
       );
 
-      ImGui::Text("size = %d x %d", cam.render_width, cam.render_height);
-      ImGui::Image((ImTextureID)(intptr_t)d_imdata.out_texture, ImVec2(cam.render_width, cam.render_height));
+      ImGui::Text("size = %d x %d", RenderCam.render_width, RenderCam.render_height);
+      ImGui::Image((ImTextureID)(intptr_t)d_imdata.out_texture, ImVec2(RenderCam.render_width, RenderCam.render_height));
       ImGui::End();
 
     }
 
     void SetupRenderViewer() {
-      d_imdata.output_image_data = std::vector<float>(cam.render_width * cam.render_height * 4);
+      d_imdata.output_image_data = std::vector<float>(RenderCam.render_width * RenderCam.render_height * 4);
     }
 
 };
