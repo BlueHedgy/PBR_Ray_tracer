@@ -6,19 +6,19 @@
 #include <algorithm>
 
 class bvh_node_custom : public hittable {
-  public: 
+  public:
     bvh_node_custom(hittable_list& world, size_t start, size_t end) {
 
     std::vector<std::shared_ptr<hittable>> objects = world.objects;
 
     bbox = aabb::empty;
       for (size_t object_index = start; object_index < end; object_index++){
-        bbox = aabb(bbox, objects[object_index]->bounding_box()); 
+        bbox = aabb(bbox, objects[object_index]->bounding_box());
       }
 
       int axis = bbox.longest_axis();
 
-      auto comparator = (axis == 0) ? box_x_compare : 
+      auto comparator = (axis == 0) ? box_x_compare :
                         (axis == 1) ? box_y_compare :
                                       box_z_compare;
 
@@ -31,7 +31,7 @@ class bvh_node_custom : public hittable {
       else{  // sort the pointer to the object list within the aabb
         std::sort(
           std::begin(objects) + start,
-          std::begin(objects) + end, 
+          std::begin(objects) + end,
           comparator);
         left;
         right;
@@ -66,12 +66,12 @@ class bvh_node_custom : public hittable {
       // compare the bouding box minimum based on axis index here
       int min_axis_interval_a = a->bounding_box().axis_interval(axis).min;
       int min_axis_interval_b = b->bounding_box().axis_interval(axis).min;
-      
+
       return min_axis_interval_a < min_axis_interval_b;
     }
-    
+
     static bool box_x_compare(std::shared_ptr<hittable> a, std::shared_ptr<hittable> b) {
-      return box_compare(a, b, 0); 
+      return box_compare(a, b, 0);
     }
 
     static bool box_y_compare(std::shared_ptr<hittable> a, std::shared_ptr<hittable> b) {

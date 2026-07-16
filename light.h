@@ -87,11 +87,11 @@ class light_list {
     light_list() {}
 
     void add(std::shared_ptr<light> l) {
-        lights.push_back(l);
+      lights.push_back(l);
     }
 
     void remove(std::shared_ptr<light> l) {
-        lights.erase(std::remove(lights.begin(), lights.end(), l), lights.end());
+      lights.erase(std::remove(lights.begin(), lights.end(), l), lights.end());
     }
 
     const lightList& get_all() const { return lights; }
