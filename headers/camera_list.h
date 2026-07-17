@@ -1,10 +1,8 @@
-#ifndef CAMERA_LIST_H
-#define CAMERA_LIST_H
+// #ifndef CAMERA_LIST_H
+// #define CAMERA_LIST_H
 
-#include "camera.h"
+// #include "camera.h"
 
-class camera_list {
 
-};
 
-#endif
+// #endif

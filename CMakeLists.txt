@@ -48,8 +48,10 @@ endif()
 set(CMAKE_LIBRARY_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/$<CONFIGURATION>")
 
 set(SOURCES
-main.cpp
-miscs/stb_init.cpp
+  main.cpp
+  src/camera.cpp
+  src/material.cpp
+  miscs/stb_init.cpp
 )
 
 set(IMGUI_SOURCE

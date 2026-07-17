@@ -33,8 +33,8 @@ class bvh_node_custom : public hittable {
           std::begin(objects) + start,
           std::begin(objects) + end,
           comparator);
-        left;
-        right;
+        // left;
+        // right;
 
         int mid = start + objects_count/2;
 

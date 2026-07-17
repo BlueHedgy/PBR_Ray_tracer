@@ -20,7 +20,7 @@ struct display_image_data {
 
 typedef std::vector<unsigned char> sdl_image;
 
-bool LoadRenderedTexture(display_image_data &d_imdata, int width,
+inline bool LoadRenderedTexture(display_image_data &d_imdata, int width,
 int height) {
 
   if (d_imdata.output_image_data.empty()) return false;

@@ -19,8 +19,7 @@
 class GUI_Handler{
   public:
 
-    GUI_Handler(Camera &cam, Scene &scene, char *output_file) :
-      cam(cam),
+    GUI_Handler(Scene &scene, char *output_file) :
       scene(scene),
       filename(output_file)
     {}
@@ -147,13 +146,13 @@ class GUI_Handler{
       return 0;
     }
 
-  private:
+    private:
     Scene &scene;
-    Camera &cam;
     char *filename;
 
-// ALL RENDER VIEWER DECLARATIONS
+    // ALL RENDER VIEWER DECLARATIONS
     display_image_data d_imdata;
+    Camera& active_cam = scene.get_active_cam();
     Camera RenderCam;
 // ------------------------------
 
@@ -201,31 +200,32 @@ class GUI_Handler{
       ImGui::SetNextWindowPos(pos, ImGuiCond_Always, ImVec2(1.0f, 0.0f));
       ImGui::SetNextWindowSize(ImVec2(0.2f * viewport->WorkSize.x, 0.5f * viewport->WorkSize.y), ImGuiCond_Once);
 
+
       ImGui::Begin("Camera settings", 0, window_flags);
 
       ImGui::Text("Image Width");
-      ImGui::InputInt("##imWidth", &cam.image_width);
+      ImGui::InputInt("##imWidth", &active_cam.image_width);
 
       ImGui::Text("Aspect Ratio");
-      ImGui::InputFloat("##aspectRatio", &cam.aspect_ratio);
+      ImGui::InputFloat("##aspectRatio", &active_cam.aspect_ratio);
 
       ImGui::Text("EnableAA"); ImGui::SameLine();
-      ImGui::Checkbox("##Enable AA", &cam.enableAA);
+      ImGui::Checkbox("##Enable AA", &active_cam.enableAA);
 
       ImGui::Text("Field of View");
-      ImGui::InputFloat("##camfov", &cam.verticalFOV, 10.0f, 160.0f);
+      ImGui::InputFloat("##camfov", &active_cam.verticalFOV, 10.0f, 160.0f);
 
       ImGui::Text("Camera position");
-      ImGui::SliderFloat3("##campos", cam.look_from.e, -10000, 10000);
+      ImGui::SliderFloat3("##campos", active_cam.look_from.e, -10000, 10000);
 
       ImGui::Text("Camera look at");
-      ImGui::SliderFloat3("##camlookat", cam.look_at.e, -10000, 10000);
+      ImGui::SliderFloat3("##camlookat", active_cam.look_at.e, -10000, 10000);
 
       ImGui::Text("Max bounces");
-      ImGui::InputInt("##maxbounces", &cam.max_bounces);
+      ImGui::InputInt("##maxbounces", &active_cam.max_bounces);
 
       ImGui::Text("Ray sample count");
-      ImGui::InputInt("##samplecount", &cam.sample_per_pixel);
+      ImGui::InputInt("##samplecount", &active_cam.sample_per_pixel);
 
       // ImGui::InputFloat()
       ImGui::Dummy(ImVec2(0.0f, 80.0f));
@@ -237,7 +237,7 @@ class GUI_Handler{
       if (ImGui::Button("RENDER")) {
 
         // Make a copy of the main camera to avoid GUI change affecting the launched render
-        RenderCam = cam;
+        RenderCam = active_cam;
         RenderCam.initialize();
         RenderCam.render_width = RenderCam.image_width;
         RenderCam.render_height = RenderCam.image_height;
@@ -276,12 +276,13 @@ class GUI_Handler{
     void Start_Render(std::atomic_bool &render_started, std::atomic_bool &render_cancelled, std::atomic_bool &render_done) {
       render_done = false;
 
-      Scene RenderScene = scene;
+      // Scene RenderScene = scene;
       std::string RenderFilename = filename;
 
       image output_image;
 
-      RenderCam.Render_MultiThreaded(RenderScene, RenderFilename, render_cancelled, output_image, d_imdata);
+      scene.process_object_bvh();
+      RenderCam.Render_MultiThreaded(scene.get_lights(), scene.get_objects(), filename, render_cancelled, output_image, d_imdata);
 
       render_started = false;
       render_done = true;

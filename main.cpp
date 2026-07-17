@@ -186,15 +186,15 @@ Scene metal_sphere_pbr() {
   auto metal_roughness_2 = std::make_shared<image_texture>("gsteel_roughness.jpg", true);
   auto metal_metalness_2 = std::make_shared<image_texture>("gsteel_metal.jpg", true);
 
-  auto red     = std::make_shared<pbr_material>(color(1.0, 0.2, 0.2), std::monostate {}, color(0.62), color(.5), 0.2);
-  auto yellow  = std::make_shared<pbr_material>(color(1.0, 1.0, 0.2), std::monostate {}, color(.1), color(.5), 0.2);
-  auto green   = std::make_shared<pbr_material>(color(0.2, 1.0, 0.2), std::monostate {}, color(.1), color(.5), 0.2);
-  auto blue    = std::make_shared<pbr_material>(color(0.2, 0.2, 1.0), std::monostate {}, color(.1), color(.5), 0.2);
-  auto gray    = std::make_shared<pbr_material>(color(1), std::monostate {}, color(.1), color(.4), 0.2);
+  auto red     = std::make_shared<pbr_material>(color(1.0, 0.2, 0.2), std::monostate {}, color(0.62), color(.5));
+  auto yellow  = std::make_shared<pbr_material>(color(1.0, 1.0, 0.2), std::monostate {}, color(.1), color(.5));
+  auto green   = std::make_shared<pbr_material>(color(0.2, 1.0, 0.2), std::monostate {}, color(.1), color(.5));
+  auto blue    = std::make_shared<pbr_material>(color(0.2, 0.2, 1.0), std::monostate {}, color(.1), color(.5));
+  auto gray    = std::make_shared<pbr_material>(color(1), std::monostate {}, color(.1), color(.4));
 
-  auto metal_sphere = std::make_shared<pbr_material>(metal_color, metal_normal, metal_metalness, metal_roughness, 0.3);
-  auto metal_sphere_1 = std::make_shared<pbr_material>(metal_color_1, metal_normal_1, metal_metalness_1, metal_roughness_1, 0.3);
-  auto metal_sphere_2 = std::make_shared<pbr_material>(metal_color_2, metal_normal_2, metal_metalness_2, metal_roughness_2, 0.3);
+  auto metal_sphere = std::make_shared<pbr_material>(metal_color, metal_normal, metal_metalness, metal_roughness);
+  auto metal_sphere_1 = std::make_shared<pbr_material>(metal_color_1, metal_normal_1, metal_metalness_1, metal_roughness_1);
+  auto metal_sphere_2 = std::make_shared<pbr_material>(metal_color_2, metal_normal_2, metal_metalness_2, metal_roughness_2);
 
   scene.add_object(std::make_shared<sphere>(point3(-1, 0.5, 0), 0.4, red));
   scene.add_object(std::make_shared<sphere>(point3(1, 0, 0), 0.8, metal_sphere));
@@ -287,7 +287,7 @@ int main(int argc, char* argv[]) {
   // cam.WriteImageToFile(output_image, filename);
 
   // std::thread GUI_thread;
-  GUI_Handler GUI(cam, scene, filename);
+  GUI_Handler GUI(scene, filename);
   GUI.SETUP();
 
 }
