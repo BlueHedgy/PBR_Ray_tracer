@@ -142,7 +142,7 @@ class Camera {
     /// @param r current (bounced) ray
     /// @param scene
     /// @param max_bounces
-    /// @param reflectance_coeff
+
     /// @param isEmissive inform the previous bounce whether this hit is emissive
     /// @param hit_point inform the previous bounce of this hit point location (for emission)
     /// @return
@@ -151,7 +151,6 @@ class Camera {
       const hittable_list& objects,
       const ray& r,
       int max_bounces,
-      float reflectance_coeff,
       bool& isEmissive,
       vec3& hit_point
     );
@@ -166,7 +165,7 @@ class Camera {
         ray r = get_ray(i, j);
         bool isEmissive;
         vec3 hit_point;
-        pixel_color += ray_color(lights, objects, r, max_bounces, reflectance_coeff, isEmissive, hit_point);
+        pixel_color += ray_color(lights, objects, r, max_bounces, isEmissive, hit_point);
       }
     }
 

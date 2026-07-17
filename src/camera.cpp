@@ -58,7 +58,7 @@ void Camera::Render(
 
         bool isEmissive;
         vec3 hit_point;
-        pixel_color = ray_color(lights, objects, r, max_bounces, reflectance_coeff, isEmissive, hit_point);
+        pixel_color = ray_color(lights, objects, r, max_bounces, isEmissive, hit_point);
       }
       output_image[i][j] = pixel_color;
     }
@@ -99,9 +99,10 @@ void Camera::Render_Scanline(
   for (int i = 0; i < render_width; i++) {
     if (render_cancelled) { return; }
     color pixel_color = color(0, 0, 0);
+
     if (enableAA) {
       process_ray_samples(lights, objects, i, line_index, pixel_color);
-      output_image[i][line_index] = pixel_color;
+      pixel_color /= sample_per_pixel;
     }
     else {
       vec3 pixel_center = pixel00_loc + (i * pixel_delta_u) + (line_index * pixel_delta_v);
@@ -110,11 +111,10 @@ void Camera::Render_Scanline(
 
       bool isEmissive;
       vec3 hit_point;
-      pixel_color = ray_color(lights, objects, r, max_bounces, reflectance_coeff, isEmissive, hit_point);
-      output_image[i][line_index] = pixel_color;
+      pixel_color = ray_color(lights, objects, r, max_bounces, isEmissive, hit_point);
     }
 
-    pixel_color /= sample_per_pixel;
+    output_image[i][line_index] = pixel_color;
 
     float red = linear_to_gamma2(pixel_color.x());
     float green = linear_to_gamma2(pixel_color.y());
@@ -126,6 +126,7 @@ void Camera::Render_Scanline(
     d_imdata.output_image_data[idx + 1] = std::clamp(green, 0.0f, 0.999f);
     d_imdata.output_image_data[idx + 2] = std::clamp(blue, 0.0f, 0.999f);
     d_imdata.output_image_data[idx + 3] = 1.0f;
+
   }
 }
 
@@ -138,7 +139,6 @@ color Camera::ray_color(
   const hittable_list& objects,
   const ray& r,
   int max_bounces,
-  float reflectance_coeff,
   bool& isEmissive,
   vec3& hit_point
 ) {
@@ -189,7 +189,7 @@ color Camera::ray_color(
   color next_ray_color;
   color color_from_emission = color(0, 0, 0);
 
-  next_ray_color = ray_color(lights, objects, scattered, max_bounces-1, reflectance_coeff, nextEmissive, next_hit_point);
+  next_ray_color = ray_color(lights, objects, scattered, max_bounces-1, nextEmissive, next_hit_point);
 
   return  direct_lighting + attenuation * next_ray_color;
 }
