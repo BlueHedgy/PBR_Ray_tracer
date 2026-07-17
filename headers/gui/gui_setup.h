@@ -25,6 +25,10 @@ class GUI_Handler{
     {}
 
     int SETUP() {
+
+      int root_window_width = 1200;
+      int root_window_height = 800;
+
       if (!SDL_Init(SDL_INIT_VIDEO | SDL_INIT_GAMEPAD))
       {
           printf("Error: SDL_Init(): %s\n", SDL_GetError());
@@ -46,7 +50,12 @@ class GUI_Handler{
 
       float main_scale = SDL_GetDisplayContentScale(SDL_GetPrimaryDisplay());
       SDL_WindowFlags window_flags = SDL_WINDOW_OPENGL | SDL_WINDOW_RESIZABLE | SDL_WINDOW_HIDDEN | SDL_WINDOW_HIGH_PIXEL_DENSITY;
-      SDL_Window* program_window = SDL_CreateWindow("PBR Ray Tracer", (int)(1200 * main_scale), (int)(800 * main_scale), window_flags);
+      SDL_Window* program_window = SDL_CreateWindow(
+        "PBR Ray Tracer",
+        (int)(root_window_width * main_scale),
+        (int)(root_window_height * main_scale),
+        window_flags
+      );
 
       if (program_window == nullptr)
       {
@@ -164,158 +173,15 @@ class GUI_Handler{
 // ----------------------------
 
 
-    void Object_Outliner(const ImGuiViewport *viewport, ImGuiWindowFlags &window_flags) {
-      window_flags |= ImGuiWindowFlags_NoCollapse;
-      window_flags |= ImGuiWindowFlags_NoMove;
+    void Object_Outliner(const ImGuiViewport *viewport, ImGuiWindowFlags &window_flags);
 
-      ImVec2 pos = ImVec2(viewport->WorkPos.x + viewport->WorkSize.x,
-                          viewport->WorkPos.y);
-      ImGui::SetNextWindowPos(pos, ImGuiCond_Always, ImVec2(1.0f, 0.0f));
-      ImGui::SetNextWindowSize(ImVec2(0.2f * viewport->WorkSize.x, 0.5f * viewport->WorkSize.y), ImGuiCond_Once);
+    void Camera_Settings(ImGuiViewport *viewport, ImGuiWindowFlags &window_flags);
 
-      ImGui::Begin("Object outline", 0, window_flags);
-      if(ImGui::Button("Add an object", ImVec2(5.0f, 2.0f))) {
+    void Start_Render(std::atomic_bool &render_started, std::atomic_bool &render_cancelled, std::atomic_bool &render_done);
 
-      }
+    void Render_Viewer(ImGuiViewport *viewport, ImGuiWindowFlags &window_flags);
 
-      // Object list
-      {
-        ImGui::PushStyleVar(ImGuiStyleVar_ChildRounding, 5.0f);
-
-        ImGui::BeginChild("##objectlist", ImVec2(0, INT_MAX), ImGuiChildFlags_Borders, window_flags);
-        ImGui::EndChild();
-        ImGui::PopStyleVar();
-      }
-      ImGui::End();
-    }
-
-    void Camera_Settings(ImGuiViewport *viewport, ImGuiWindowFlags &window_flags){
-
-      window_flags |= ImGuiWindowFlags_NoCollapse;
-      window_flags |= ImGuiWindowFlags_NoMove;
-
-      ImVec2 pos = ImVec2(viewport->WorkPos.x + viewport->WorkSize.x,
-                          viewport->WorkPos.y + 0.5f * viewport->WorkSize.y);
-
-      ImGui::SetNextWindowPos(pos, ImGuiCond_Always, ImVec2(1.0f, 0.0f));
-      ImGui::SetNextWindowSize(ImVec2(0.2f * viewport->WorkSize.x, 0.5f * viewport->WorkSize.y), ImGuiCond_Once);
-
-
-      ImGui::Begin("Camera settings", 0, window_flags);
-
-      ImGui::Text("Image Width");
-      ImGui::InputInt("##imWidth", &active_cam.image_width);
-
-      ImGui::Text("Aspect Ratio");
-      ImGui::InputFloat("##aspectRatio", &active_cam.aspect_ratio);
-
-      ImGui::Text("EnableAA"); ImGui::SameLine();
-      ImGui::Checkbox("##Enable AA", &active_cam.enableAA);
-
-      ImGui::Text("Field of View");
-      ImGui::InputFloat("##camfov", &active_cam.verticalFOV, 10.0f, 160.0f);
-
-      ImGui::Text("Camera position");
-      ImGui::SliderFloat3("##campos", active_cam.look_from.e, -10000, 10000);
-
-      ImGui::Text("Camera look at");
-      ImGui::SliderFloat3("##camlookat", active_cam.look_at.e, -10000, 10000);
-
-      ImGui::Text("Max bounces");
-      ImGui::InputInt("##maxbounces", &active_cam.max_bounces);
-
-      ImGui::Text("Ray sample count");
-      ImGui::InputInt("##samplecount", &active_cam.sample_per_pixel);
-
-      // ImGui::InputFloat()
-      ImGui::Dummy(ImVec2(0.0f, 80.0f));
-      ImGui::Text("Output file path:");
-      ImGui::InputText("##outputfile", filename, 256);
-
-
-      ImGui::BeginDisabled(render_started);
-      if (ImGui::Button("RENDER")) {
-
-        // Make a copy of the main camera to avoid GUI change affecting the launched render
-        RenderCam = active_cam;
-        RenderCam.initialize();
-        RenderCam.render_width = RenderCam.image_width;
-        RenderCam.render_height = RenderCam.image_height;
-
-        std::cout << RenderCam.render_width << " " << RenderCam.render_height << std::endl;
-        if (!render_started) SetupRenderViewer();
-
-        render_started = true;
-        render_cancelled = false;
-
-        renderer_thread = std::thread(
-          &GUI_Handler::Start_Render,
-          this,
-          std::ref(render_started),
-          std::ref(render_cancelled),
-          std::ref(render_done)
-        );
-      }
-
-      // Check if the renderer thread is done and thus joinable, then join
-      thread_guard_condition guard_renderer(renderer_thread, render_started);
-
-      ImGui::EndDisabled();
-
-      ImGui::SameLine();
-
-      ImGui::BeginDisabled(!render_started);
-      if (ImGui::Button("CANCEL RENDER")) {
-        render_cancelled = true;
-      }
-      ImGui::EndDisabled();
-
-      ImGui::End();
-    }
-
-    void Start_Render(std::atomic_bool &render_started, std::atomic_bool &render_cancelled, std::atomic_bool &render_done) {
-      render_done = false;
-
-      // Scene RenderScene = scene;
-      std::string RenderFilename = filename;
-
-      image output_image;
-
-      scene.process_object_bvh();
-      RenderCam.Render_MultiThreaded(scene.get_lights(), scene.get_objects(), filename, render_cancelled, output_image, d_imdata);
-
-      render_started = false;
-      render_done = true;
-
-    }
-
-
-    void Render_Viewer(ImGuiViewport *viewport, ImGuiWindowFlags &window_flags) {
-      window_flags |= ImGuiWindowFlags_NoCollapse;
-      window_flags |= ImGuiWindowFlags_NoMove;
-
-      ImVec2 pos = ImVec2(viewport->WorkPos.x, viewport->WorkPos.y);
-      ImGui::SetNextWindowPos(pos, ImGuiCond_Always, ImVec2(0.0f, 0.0f));
-      ImGui::SetNextWindowSize(ImVec2(0.8f * viewport->WorkSize.x, viewport->WorkSize.y), ImGuiCond_Once);
-
-      ImGui::Begin("OpenGL Texture Text");
-
-      bool is_rendered = LoadRenderedTexture(
-        d_imdata,
-        RenderCam.render_width,
-        RenderCam.render_height
-      );
-
-      ImGui::Text("size = %d x %d", RenderCam.render_width, RenderCam.render_height);
-      ImGui::Image((ImTextureID)(intptr_t)d_imdata.out_texture, ImVec2(RenderCam.render_width, RenderCam.render_height));
-      ImGui::End();
-
-    }
-
-    void SetupRenderViewer() {
-      d_imdata.output_image_data = std::vector<float>(RenderCam.render_width * RenderCam.render_height * 4);
-    }
-
+    void SetupRenderViewer();
 };
 
 

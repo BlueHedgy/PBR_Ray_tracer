@@ -40,22 +40,12 @@ class Scene {
       lights.add(new_light);
     }
 
-    void process_object_bvh(){
-      objects = hittable_list(std::make_shared<bvh_node_custom>(objects, 0, objects.objects.size()));
+    hittable_list process_object_bvh(){
+      return hittable_list(std::make_shared<bvh_node_custom>(objects, 0, objects.objects.size()));
     }
 
     Camera& get_active_cam() {
       return cameras.get_cam(active_cam_index);
-    }
-
-    void Render(
-      std::string &filename,
-      std::atomic_bool& render_cancelled,
-      image & output_image,
-      display_image_data& d_imdata
-    ) {
-      process_object_bvh();
-      get_active_cam().Render_MultiThreaded(lights, objects, filename, render_cancelled, output_image, d_imdata);
     }
 
   private:

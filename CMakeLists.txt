@@ -51,6 +51,9 @@ set(SOURCES
   main.cpp
   src/camera.cpp
   src/material.cpp
+  src/gui/gui_camera.cpp
+  src/gui/gui_object_outliner.cpp
+  src/gui/gui_render_viewer.cpp
   miscs/stb_init.cpp
 )
 

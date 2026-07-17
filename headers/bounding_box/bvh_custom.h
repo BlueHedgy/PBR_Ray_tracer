@@ -9,11 +9,10 @@ class bvh_node_custom : public hittable {
   public:
     bvh_node_custom(hittable_list& world, size_t start, size_t end) {
 
-    std::vector<std::shared_ptr<hittable>> objects = world.objects;
 
     bbox = aabb::empty;
       for (size_t object_index = start; object_index < end; object_index++){
-        bbox = aabb(bbox, objects[object_index]->bounding_box());
+        bbox = aabb(bbox, world.objects[object_index]->bounding_box());
       }
 
       int axis = bbox.longest_axis();
@@ -23,15 +22,15 @@ class bvh_node_custom : public hittable {
                                       box_z_compare;
 
       size_t objects_count = end - start;
-      if (objects_count == 1) left = right = objects[start];
+      if (objects_count == 1) left = right = world.objects[start];
       else if (objects_count == 2) {
-        left = objects[start];
-        right = objects[start+1];
+        left = world.objects[start];
+        right = world.objects[start+1];
       }
       else{  // sort the pointer to the object list within the aabb
         std::sort(
-          std::begin(objects) + start,
-          std::begin(objects) + end,
+          std::begin(world.objects) + start,
+          std::begin(world.objects) + end,
           comparator);
         // left;
         // right;
