@@ -78,9 +78,8 @@ class sphere : public hittable {
 
     static void get_sphere_uv(const point3& p, double& u, double& v) {
       auto theta = std::acos(p.y());
-      auto phi = std::atan2(p.z(), -p.x());
-
-      u = phi / (2*Pi);
+      auto phi = std::atan2(p.z(), -p.x()); // range [-0.5, 0.5]
+      u = 0.5 + phi / (2*Pi); //shift back to [0, 1]
       v = theta / Pi;
     }
 
