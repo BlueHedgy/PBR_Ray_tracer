@@ -73,16 +73,20 @@ add_subdirectory( external/SDL EXCLUDE_FROM_ALL )
 
 target_include_directories(raytrace PRIVATE
   ${CMAKE_SOURCE_DIR}
-  ${CMAKE_SOURCE_DIR}/material
   ${CMAKE_SOURCE_DIR}/external
-  ${CMAKE_SOURCE_DIR}/external/stb
-  ${CMAKE_SOURCE_DIR}/external/SDL/include
   ${CMAKE_SOURCE_DIR}/external/imgui
   ${CMAKE_SOURCE_DIR}/external/imgui/backends
-  ${CMAKE_SOURCE_DIR}/external/imgui/misc/cpp/
-  ${CMAKE_SOURCE_DIR}/noises
-  ${CMAKE_SOURCE_DIR}/primitives
-  ${CMAKE_SOURCE_DIR}/gui
+  ${CMAKE_SOURCE_DIR}/external/SDL/include
+  ${CMAKE_SOURCE_DIR}/external/stb
+  ${CMAKE_SOURCE_DIR}/external/imgui/misc/cpp
+  ${CMAKE_SOURCE_DIR}/headers
+  ${CMAKE_SOURCE_DIR}/headers/bounding_box
+  ${CMAKE_SOURCE_DIR}/headers/geometry
+  ${CMAKE_SOURCE_DIR}/headers/gui
+  ${CMAKE_SOURCE_DIR}/headers/material
+  ${CMAKE_SOURCE_DIR}/headers/maths
+  ${CMAKE_SOURCE_DIR}/headers/noises
+  ${CMAKE_SOURCE_DIR}/headers/ray_tracer
 )
 
 find_package(OpenGL REQUIRED)
