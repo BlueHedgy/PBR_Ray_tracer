@@ -17,16 +17,16 @@ class Scene {
   public:
     Scene() = default;
 
-    Scene(const scene_component_t &lights,
-          const scene_component_t &objects,
-          const scene_component_t &camerasma
+    Scene(const scene_component_t &_lights,
+          const scene_component_t &_objects,
+          const scene_component_t &_cameras
     ) {
-      process_input(lights);
-      process_input(objects);
-      process_input(cameras);
+      process_input(_lights);
+      process_input(_objects);
+      process_input(_cameras);
     }
 
-    size_t active_cam_index;
+    size_t active_cam_index = 0;
 
     const light_list& get_lights()     const { return lights;}
     const hittable_list& get_objects() const { return objects; }

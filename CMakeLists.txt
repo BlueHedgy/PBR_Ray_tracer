@@ -12,39 +12,42 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 if (CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
   add_compile_options(-fcolor-diagnostics -fansi-escape-codes)
 
-  if (MSVC)
+  if (CMAKE_CXX_COMPILER_FRONTEND_VARIANT STREQUAL "MSVC")
     add_compile_options(
       /W4 /permissive-
       /clang:-Wno-unused-parameter
       /clang:-Wno-sign-compare
       /clang:-Wno-unused-variable
     )
-    set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/bin/windows)
 
-  elseif (CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
+  elseif (CMAKE_CXX_COMPILER_FRONTEND_VARIANT STREQUAL "GNU")
     add_compile_options(
     -Wall
-    -Wno-changes-meaning
     -Wno-unused-parameter
     -Wno-unused-variable
     )
-    set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/bin/linux)
 
   endif()
 
 elseif (CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
-  add_compile_options(-Wall -Wno-changes-meaning)
-  set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/bin/linux)
+  add_compile_options(
+    -Wall -Wno-changes-meaning
+    -Wno-unused-parameter
+    -Wno-unused-variable
+  )
 
 elseif (MSVC)
   add_compile_options(/W4 /permissive-)
-  set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/bin/windows)
 
 endif()
 
+if (CMAKE_SYSTEM_NAME STREQUAL "Linux")
+  set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/bin/linux)
+elseif (CMAKE_SYSTEM_NAME STREQUAL "Windows")
+  set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/bin/windows)
+endif()
 
 
-# set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/$<CONFIGURATION>")
 set(CMAKE_LIBRARY_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/$<CONFIGURATION>")
 
 set(SOURCES
@@ -95,4 +98,9 @@ target_include_directories(raytrace PRIVATE
 )
 
 find_package(OpenGL REQUIRED)
-target_link_libraries(raytrace PRIVATE SDL3::SDL3 OpenGL::GL)
+
+if (CMAKE_CXX_COMPILER_ID STREQUAL "Clang" AND CMAKE_CXX_COMPILER_FRONTEND_VARIANT STREQUAL "GNU")
+  target_link_libraries(raytrace PRIVATE SDL3::SDL3 OpenGL::GL m)
+elseif (CMAKE_CXX_COMPILER_ID STREQUAL "Clang" AND CMAKE_CXX_COMPILER_FRONTEND_VARIANT STREQUAL "MSVC")
+  target_link_libraries(raytrace PRIVATE SDL3::SDL3 OpenGL::GL)
+endif ()

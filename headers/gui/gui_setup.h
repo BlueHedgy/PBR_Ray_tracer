@@ -14,7 +14,7 @@
 #include "scene.h"
 #include "multi_thread.h"
 #include "gui_image_load.h"
-
+#include <atomic>
 
 class GUI_Handler{
   public:
