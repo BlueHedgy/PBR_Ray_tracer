@@ -13,7 +13,9 @@ What exactly has been implemented ?
 - Dynamic scene structure that allows loading and unloading cameras, lights and objects
 - Point light, directional light
 - Custom texture image usage for: albedo, roughness, metalness, normal
-- A beginning base GUI for the rendering and camera adjustment
+- GUI for the rendering and camera adjustment
+- Multi-threaded rendering
+- Headless render
 
 What is planned ?
 -------------------------------------
@@ -22,7 +24,7 @@ What is planned ?
 - Asset imports, potentially with Assimp
 - Monte Carlo random walk sampling for the GGX distribution
 - Denoising
-- Multithreading version
+- ~~Multithreading version~~
 - GPU accelerated (CUDA)
 - Eventually transition to Vulkan (?)
 - and more.....
@@ -34,27 +36,46 @@ Building and Running
 -------------------
 The project uses CMake.
 
-To build:
+### To build
+Below are some example ways to build the project:
 
 - On Windows:
+  - Using MSVC:
   ```shell
     cmake -S . -B build && cmake --build build
     cmake -S . -B build && cmake --build build --config Release # For release binary
     cmake -S . -B build && cmake --build build --config Debug   # For debug binary
   ```
 
-- On Linux:
+  - Using Clang with MSVC variant:
 
+  ```shell
+    cmake -B build/windows -G Ninja `
+      -DCMAKE_C_COMPILER="clang-cl" `
+      -DCMAKE_CXX_COMPILER="clang-cl" `
+      -DCMAKE_BUILD_TYPE="RelWithDebInfo" `
+    && cmake --build build/windows
+  ```
+
+- On Linux:
+  - Using GCC:
   ```shell
     cmake -S . -B build && cmake --build build
     cmake -S . -B build/Release -DCMAKE_BUILD_TYPE=Release && cmake --build build/Release
     cmake -S . -B build/Debug -DCMAKE_BUILD_TYPE=Debug && cmake --build build/Debug
   ```
 
+  - Using Clang with GCC variant:
+  ```shell
+    cmake -B build/linux -G Ninja `
+      -DCMAKE_C_COMPILER="clang" `
+      -DCMAKE_CXX_COMPILER="clang++" `
+      -DCMAKE_BUILD_TYPE="RelWithDebInfo" `
+    && cmake --build build/linux
+  ```
 
 To run:
 
-- The built binary can be found in the **bin/** folder of the project directory
 
 - On Windows:
   ```shell
@@ -74,14 +95,14 @@ To run:
     ./bin/Release/raytrace 8 output/output5.ppm
   ```
 
-  As of this moment, only the last case 8 works, due to all the changes in the ray color calculation that no longer supports non pbr materials from the book
+- The built binary can be found in the **bin/** folder of the project directory
+
+### ***As of this moment, only the last preset case 8 works, due to all the changes in the ray color calculation that no longer supports non pbr materials from the book***
 
 
 An example render case of the project:
 ----------------
-![Main_render]
 
-[Main_render]: output/MainRender.png
+A render of a red sphere, a gold metal sphere, and a rusted iron sphere with white emissive light on top, surrounded by multiple walls / planes with reflective and partially metallic properties. Note that the video is sped up 2x.
 
-
-A render of a red sphere, a gold metal sphere, and a rusted iron sphere with white emissive light on top, surrounded by multiple walls / planes with reflective and partially metallic properties at 1000 samples per pixel
+![Main_render](output/showcase.gif)
