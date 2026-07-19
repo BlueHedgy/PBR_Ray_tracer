@@ -80,10 +80,30 @@ void Camera::Render_MultiThreaded(
   output_image = image(render_width, std::vector<color>(render_height));
   thread_pool render_threads;
 
-  for (int j = 0; j < render_height; j++) {
-    render_threads.enqueue([this, j, &output_image, &render_cancelled, &d_imdata, &lights, &objects] {
-      Render_Scanline(lights, objects, j, output_image, render_cancelled, d_imdata);
+
+  size_t num_threads = std::thread::hardware_concurrency();
+  for (size_t tid = 0; tid < num_threads; tid++){
+    render_threads.enqueue([this, &lights, &objects, tid, &output_image, &render_cancelled, &d_imdata] {
+      Render_ChunkLines(lights, objects, tid,  render_cancelled, output_image, d_imdata);
     });
+  }
+}
+
+void Camera::Render_ChunkLines(
+  const light_list &lights,
+  const hittable_list &objects,
+  size_t t_idx,
+  const std::atomic_bool &render_cancelled,
+  image &output_image,
+  display_image_data &d_imdata
+) {
+  size_t chunk_size = std::ceil(image_height / std::thread::hardware_concurrency());
+  for (
+    size_t line_index = t_idx * chunk_size;
+    line_index < (t_idx + 1) * chunk_size && line_index < render_height;
+    line_index++
+  ) {
+    Render_Scanline(lights, objects, line_index, output_image, render_cancelled, d_imdata);
   }
 }
 

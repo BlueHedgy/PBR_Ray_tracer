@@ -52,7 +52,7 @@ class thread_guard_condition {
 class thread_pool {
 	public:
 		// Constructor to creates a thread pool with given number of threads
-		thread_pool(size_t num_threads = std::thread::hardware_concurrency() - 4) {
+		thread_pool(size_t num_threads = std::thread::hardware_concurrency()) {
 			// Creating worker threads
 
 			std::cout << "Max hardware thread count: " << std::thread::hardware_concurrency() << std::endl;

@@ -13,7 +13,7 @@
 #include <thread>
 #include <mutex>
 #include <algorithm>
-
+#include <atomic>
 #include "gui_image_load.h"
 
 typedef std::vector<std::vector<color>> image;
@@ -94,6 +94,15 @@ class Camera {
       image &output_image, display_image_data &d_imdata
     );
 
+
+  void Render_ChunkLines(
+    const light_list &lights,
+    const hittable_list &objects,
+    size_t t_idx,
+    const std::atomic_bool &render_cancelled,
+    image &output_image,
+    display_image_data &d_imdata
+  );
 
     /// @brief Compute pixel's colors on an image row (scanline)
     /// @param render_cancelled polled check whether a render cancel is requested from the GUI
