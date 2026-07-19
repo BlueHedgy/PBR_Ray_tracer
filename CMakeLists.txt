@@ -9,19 +9,55 @@ project(
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-if (CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
-  add_compile_options(-Wall -Wno-changes-meaning)
-  set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/bin/linux)
+if (CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
+  add_compile_options(-fcolor-diagnostics -fansi-escape-codes)
+
+  if (CMAKE_CXX_COMPILER_FRONTEND_VARIANT STREQUAL "MSVC")
+    add_compile_options(
+      /W4 /permissive-
+      /clang:-Wno-unused-parameter
+      /clang:-Wno-sign-compare
+      /clang:-Wno-unused-variable
+    )
+
+  elseif (CMAKE_CXX_COMPILER_FRONTEND_VARIANT STREQUAL "GNU")
+    add_compile_options(
+    -Wall
+    -Wno-unused-parameter
+    -Wno-unused-variable
+    )
+
+  endif()
+
+elseif (CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
+  add_compile_options(
+    -Wall -Wno-changes-meaning
+    -Wno-unused-parameter
+    -Wno-unused-variable
+  )
+
 elseif (MSVC)
   add_compile_options(/W4 /permissive-)
+
+endif()
+
+if (CMAKE_SYSTEM_NAME STREQUAL "Linux")
+  set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/bin/linux)
+elseif (CMAKE_SYSTEM_NAME STREQUAL "Windows")
   set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/bin/windows)
 endif()
 
-# set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/$<CONFIGURATION>")
+
 set(CMAKE_LIBRARY_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/$<CONFIGURATION>")
 
 set(SOURCES
-main.cpp
+  main.cpp
+  src/camera.cpp
+  src/material.cpp
+  src/gui/gui_camera.cpp
+  src/gui/gui_object_outliner.cpp
+  src/gui/gui_render_viewer.cpp
+  miscs/stb_init.cpp
 )
 
 set(IMGUI_SOURCE
@@ -45,15 +81,26 @@ add_subdirectory( external/SDL EXCLUDE_FROM_ALL )
 
 target_include_directories(raytrace PRIVATE
   ${CMAKE_SOURCE_DIR}
-  ${CMAKE_SOURCE_DIR}/material
   ${CMAKE_SOURCE_DIR}/external
-  ${CMAKE_SOURCE_DIR}/external/SDL/include
   ${CMAKE_SOURCE_DIR}/external/imgui
   ${CMAKE_SOURCE_DIR}/external/imgui/backends
-  ${CMAKE_SOURCE_DIR}/external/imgui/misc/cpp/
-  ${CMAKE_SOURCE_DIR}/noises
-  ${CMAKE_SOURCE_DIR}/primitives
+  ${CMAKE_SOURCE_DIR}/external/SDL/include
+  ${CMAKE_SOURCE_DIR}/external/stb
+  ${CMAKE_SOURCE_DIR}/external/imgui/misc/cpp
+  ${CMAKE_SOURCE_DIR}/headers
+  ${CMAKE_SOURCE_DIR}/headers/bounding_box
+  ${CMAKE_SOURCE_DIR}/headers/geometry
+  ${CMAKE_SOURCE_DIR}/headers/gui
+  ${CMAKE_SOURCE_DIR}/headers/material
+  ${CMAKE_SOURCE_DIR}/headers/maths
+  ${CMAKE_SOURCE_DIR}/headers/noises
+  ${CMAKE_SOURCE_DIR}/headers/ray_tracer
 )
 
 find_package(OpenGL REQUIRED)
-target_link_libraries(raytrace PRIVATE SDL3::SDL3 OpenGL::GL)
+
+if (CMAKE_CXX_COMPILER_ID STREQUAL "Clang" AND CMAKE_CXX_COMPILER_FRONTEND_VARIANT STREQUAL "GNU")
+  target_link_libraries(raytrace PRIVATE SDL3::SDL3 OpenGL::GL m)
+elseif (CMAKE_CXX_COMPILER_ID STREQUAL "Clang" AND CMAKE_CXX_COMPILER_FRONTEND_VARIANT STREQUAL "MSVC")
+  target_link_libraries(raytrace PRIVATE SDL3::SDL3 OpenGL::GL)
+endif ()

@@ -12,7 +12,9 @@
 #include "scene.h"
 
 #include <string>
-
+#include <thread>
+#include <atomic>
+#include <chrono>
 
 Scene bouncing_sphere() {
   Scene scene;
@@ -180,22 +182,20 @@ Scene metal_sphere_pbr() {
   auto metal_roughness_1 = std::make_shared<image_texture>("rustediron2_roughness.png", true);
   auto metal_metalness_1 = std::make_shared<image_texture>("rustediron2_metallic.png", true);
 
-  auto no_normal = std::make_shared<image_texture>("no_normal.png", true);
-
   auto metal_color_2 = std::make_shared<image_texture>("gsteel_color.jpg", false);
   auto metal_normal_2 = std::make_shared<image_texture>("gsteel_normal.jpg", true);
   auto metal_roughness_2 = std::make_shared<image_texture>("gsteel_roughness.jpg", true);
   auto metal_metalness_2 = std::make_shared<image_texture>("gsteel_metal.jpg", true);
 
-  auto red     = std::make_shared<pbr_material>(color(1.0, 0.2, 0.2), std::monostate {}, color(0.62), color(.5), 0.2);
-  auto yellow  = std::make_shared<pbr_material>(color(1.0, 1.0, 0.2), std::monostate {}, color(.1), color(.5), 0.2);
-  auto green   = std::make_shared<pbr_material>(color(0.2, 1.0, 0.2), std::monostate {}, color(.1), color(.5), 0.2);
-  auto blue    = std::make_shared<pbr_material>(color(0.2, 0.2, 1.0), std::monostate {}, color(.1), color(.5), 0.2);
-  auto gray    = std::make_shared<pbr_material>(color(1), std::monostate {}, color(.1), color(.4), 0.2);
+  auto red     = std::make_shared<pbr_material>(color(1.0, 0.2, 0.2), std::monostate {}, color(0.62), color(.5));
+  auto yellow  = std::make_shared<pbr_material>(color(1.0, 1.0, 0.2), std::monostate {}, color(.1), color(.5));
+  auto green   = std::make_shared<pbr_material>(color(0.2, 1.0, 0.2), std::monostate {}, color(.1), color(.5));
+  auto blue    = std::make_shared<pbr_material>(color(0.2, 0.2, 1.0), std::monostate {}, color(.1), color(.5));
+  auto gray    = std::make_shared<pbr_material>(color(1), std::monostate {}, color(.1), color(.4));
 
-  auto metal_sphere = std::make_shared<pbr_material>(metal_color, metal_normal, metal_metalness, metal_roughness, 0.3);
-  auto metal_sphere_1 = std::make_shared<pbr_material>(metal_color_1, metal_normal_1, metal_metalness_1, metal_roughness_1, 0.3);
-  auto metal_sphere_2 = std::make_shared<pbr_material>(metal_color_2, metal_normal_2, metal_metalness_2, metal_roughness_2, 0.3);
+  auto metal_sphere = std::make_shared<pbr_material>(metal_color, metal_normal, metal_metalness, metal_roughness);
+  auto metal_sphere_1 = std::make_shared<pbr_material>(metal_color_1, metal_normal_1, metal_metalness_1, metal_roughness_1);
+  auto metal_sphere_2 = std::make_shared<pbr_material>(metal_color_2, metal_normal_2, metal_metalness_2, metal_roughness_2);
 
   scene.add_object(std::make_shared<sphere>(point3(-1, 0.5, 0), 0.4, red));
   scene.add_object(std::make_shared<sphere>(point3(1, 0, 0), 0.8, metal_sphere));
@@ -225,24 +225,29 @@ Scene metal_sphere_pbr() {
 int main(int argc, char* argv[]) {
 
   int render_case;
-  char *filename;
+  char filename[256] = "D:\\PROGRAMMING\\Active_Projects\\RayTraceLearn\\oneweekend\\output\\output.ppm";
 
-  if (argc != 3) {
-    std::cout << "Command: render_case filename !!" << std::endl;
+  if (argc > 3) {
+    std::cout << "Command: <render_case> filename> !!" << std::endl;
     return -1;
   }
 
-  try  {
-    render_case = std::stoi(argv[1]);
-  } catch (const std::exception& e) {
-    std::cerr << "render_case NOT an integer.\n";
-    return 1;
+  if (argc >=2) {
+    try  {
+      render_case = std::stoi(argv[1]);
+    } catch (const std::exception& e) {
+      std::cerr << "render_case NOT an integer.\n";
+      return 1;
+    }
   }
 
-  filename = argv[2];
+  if (argc == 3){
+    std::strncpy(filename, argv[2], sizeof(filename) - 1);
+    filename[sizeof(filename) - 1] = '\0';
+  }
 
   Scene scene;
-  // render_case = 8;
+  render_case = 8;
   switch (render_case) {
     case 1: scene = bouncing_sphere(); break;
     case 2: scene = checkered_spheres(); break;
@@ -255,28 +260,38 @@ int main(int argc, char* argv[]) {
   }
 
     // Render
-  Camera cam = Camera();
 
-  cam.image_width = 1024;
-  cam.aspect_ratio = 16.0 / 9.0;
-  cam.enableAA          = true;
-  cam.reflectance_coeff = 0.5;
-  cam.verticalFOV       = 60;
 
-  cam.look_from         = point3(0, 0, 2.5);
-  cam.look_at           = point3(0, 0, 0);
-  cam.world_up          = vec3(0, 1, 0);
+  if (argc > 1) { // One shot headless render
+    std::cout << "RUNNING HEADLESS" << std::endl;
 
-  cam.max_bounces       = 10;
-  cam.sample_per_pixel  = 1000;
+    Camera& cam = scene.get_active_cam();
+    cam.initialize();
+    cam.render_height = cam.image_height;
+    cam.render_width = cam.image_width;
 
-  cam.dof_angle         = 0.0;
-  cam.focus_dist        = 3.4;
-  cam.background        = color(0);
+    image output_image;
+    display_image_data d_imdata;
+    d_imdata.output_image_data = std::vector<float>(cam.render_width * cam.render_height * 4);
 
-  cam.Render(scene, filename);
+    std::atomic_bool render_cancelled = false;
 
-  // GUI_Handler GUI(cam, object_list, filename);
-  // GUI.SETUP();
+    scene.process_object_bvh();
 
+    auto start = std::chrono::high_resolution_clock::now();
+
+    cam.Render_MultiThreaded(scene.get_lights(), scene.get_objects(), filename, render_cancelled, output_image, d_imdata);
+
+    auto end = std::chrono::high_resolution_clock::now();
+    auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
+
+    std::cout << "Render time: " << duration.count() << " ms" << std::endl;
+
+    cam.WriteImageToFile(output_image, filename);
+
+  }
+  else {
+    GUI_Handler GUI(scene, filename);
+    GUI.SETUP();
+  }
 }
