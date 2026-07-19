@@ -56,7 +56,10 @@ void GUI_Handler::Camera_Settings(ImGuiViewport *viewport,  ImGuiWindowFlags &wi
     RenderCam.render_height = RenderCam.image_height;
 
     std::cout << RenderCam.render_width << " " << RenderCam.render_height << std::endl;
-    if (!render_started) SetupRenderViewer();
+
+    if (!render_started) { // allocate the output image data after knowing the camera render sizes
+      d_imdata.output_image_data = std::vector<float>(RenderCam.render_width * RenderCam.render_height * 4);
+    }
 
     render_started = true;
     render_cancelled = false;
@@ -87,7 +90,11 @@ void GUI_Handler::Camera_Settings(ImGuiViewport *viewport,  ImGuiWindowFlags &wi
   ImGui::End();
 }
 
-void GUI_Handler::Start_Render(std::atomic_bool &render_started, std::atomic_bool &render_cancelled, std::atomic_bool &render_done) {
+void GUI_Handler::Start_Render(
+  std::atomic_bool &render_started,
+  std::atomic_bool &render_cancelled,
+  std::atomic_bool &render_done
+) {
   render_done = false;
 
   std::string RenderFilename = filename;

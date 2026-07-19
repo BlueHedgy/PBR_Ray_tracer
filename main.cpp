@@ -14,6 +14,7 @@
 #include <string>
 #include <thread>
 #include <atomic>
+#include <chrono>
 
 Scene bouncing_sphere() {
   Scene scene;
@@ -226,22 +227,24 @@ int main(int argc, char* argv[]) {
   int render_case;
   char filename[256] = "D:\\PROGRAMMING\\Active_Projects\\RayTraceLearn\\oneweekend\\output\\output.ppm";
 
-  // if (argc > 3) {
-  //   std::cout << "Command: <render_case> filename> !!" << std::endl;
-  //   return -1;
-  // }
+  if (argc > 3) {
+    std::cout << "Command: <render_case> filename> !!" << std::endl;
+    return -1;
+  }
 
-  // try  {
-  //   render_case = std::stoi(argv[1]);
-  // } catch (const std::exception& e) {
-  //   std::cerr << "render_case NOT an integer.\n";
-  //   return 1;
-  // }
+  if (argc >=2) {
+    try  {
+      render_case = std::stoi(argv[1]);
+    } catch (const std::exception& e) {
+      std::cerr << "render_case NOT an integer.\n";
+      return 1;
+    }
+  }
 
-  // if (argc == 3){
-  //   std::strncpy(filename, argv[2], sizeof(filename) - 1);
-  //   filename[sizeof(filename) - 1] = '\0';
-  // }
+  if (argc == 3){
+    std::strncpy(filename, argv[2], sizeof(filename) - 1);
+    filename[sizeof(filename) - 1] = '\0';
+  }
 
   Scene scene;
   render_case = 8;
@@ -257,37 +260,38 @@ int main(int argc, char* argv[]) {
   }
 
     // Render
-  Camera cam = Camera();
 
-  cam.image_width = 200;
-  cam.aspect_ratio = 16.0 / 9.0;
-  cam.enableAA          = true;
-  cam.reflectance_coeff = 0.5;
-  cam.verticalFOV       = 60;
 
-  cam.look_from         = point3(0, 0, 2.5);
-  cam.look_at           = point3(0, 0, 0);
-  cam.world_up          = vec3(0, 1, 0);
+  if (argc > 1) { // One shot headless render
+    std::cout << "RUNNING HEADLESS" << std::endl;
 
-  cam.max_bounces       = 10;
-  cam.sample_per_pixel  = 10;
+    Camera& cam = scene.get_active_cam();
+    cam.initialize();
+    cam.render_height = cam.image_height;
+    cam.render_width = cam.image_width;
 
-  cam.dof_angle         = 0.0;
-  cam.focus_dist        = 3.4;
-  cam.background        = color(0);
+    image output_image;
+    display_image_data d_imdata;
+    d_imdata.output_image_data = std::vector<float>(cam.render_width * cam.render_height * 4);
 
-  // image output_image;
-  // cam.Render(scene, filename, output_image);
+    std::atomic_bool render_cancelled = false;
 
-  // std::atomic_bool render_started = false;
-  // std::atomic_bool render_cancelled = false;
-  // std::thread renderer_thread;
+    scene.process_object_bvh();
 
-  // cam.Render_MultiThreaded(scene, filename, render_cancelled, output_image);
-  // cam.WriteImageToFile(output_image, filename);
+    auto start = std::chrono::high_resolution_clock::now();
 
-  // std::thread GUI_thread;
-  GUI_Handler GUI(scene, filename);
-  GUI.SETUP();
+    cam.Render_MultiThreaded(scene.get_lights(), scene.get_objects(), filename, render_cancelled, output_image, d_imdata);
 
+    auto end = std::chrono::high_resolution_clock::now();
+    auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
+
+    std::cout << "Render time: " << duration.count() << " ms" << std::endl;
+
+    cam.WriteImageToFile(output_image, filename);
+
+  }
+  else {
+    GUI_Handler GUI(scene, filename);
+    GUI.SETUP();
+  }
 }

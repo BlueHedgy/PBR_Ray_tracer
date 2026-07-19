@@ -56,9 +56,6 @@ class Camera {
     float dof_angle = 0;
     float focus_dist = 10;
 
-    // lightList &lights;
-    // hittable_list &objects;
-
     Camera() {}
 
     vec3 getCenter(){ return camera_center; }

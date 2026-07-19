@@ -80,8 +80,8 @@ void Camera::Render_MultiThreaded(
   output_image = image(render_width, std::vector<color>(render_height));
   thread_pool render_threads;
 
+  size_t num_threads = std::thread::hardware_concurrency() - 2;
 
-  size_t num_threads = std::thread::hardware_concurrency();
   for (size_t tid = 0; tid < num_threads; tid++){
     render_threads.enqueue([this, &lights, &objects, tid, &output_image, &render_cancelled, &d_imdata] {
       Render_ChunkLines(lights, objects, tid,  render_cancelled, output_image, d_imdata);
@@ -97,9 +97,17 @@ void Camera::Render_ChunkLines(
   image &output_image,
   display_image_data &d_imdata
 ) {
-  size_t chunk_size = std::ceil(image_height / std::thread::hardware_concurrency());
+
+  size_t num_threads = std::thread::hardware_concurrency() - 2; // 14
+  size_t chunk_size = image_height / num_threads;
+
+  size_t line_index = t_idx * chunk_size;
+  if (t_idx == num_threads - 1) {
+    chunk_size = image_height - (num_threads - 1) * chunk_size;
+  }
+  
   for (
-    size_t line_index = t_idx * chunk_size;
+    line_index;
     line_index < (t_idx + 1) * chunk_size && line_index < render_height;
     line_index++
   ) {
@@ -241,7 +249,7 @@ void Camera::WriteImageToFile(const image &output_image, const std::string &file
     std::clog << "\rScanlines remaining: " << (render_height - j) << ' ' << std::flush;
     for (int i = 0; i < render_width; i++) {
       color pixel_color = output_image[i][j];
-      write_color(out, pixel_samples_scale * pixel_color);
+      write_color(out, /* pixel_samples_scale * */ pixel_color);
     }
   }
 
